@@ -64,6 +64,7 @@
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(OutDir)\$(ProjectName).exe</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalOptions>/SUBSYSTEM:CONSOLE %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -81,6 +82,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="flooding.cpp" />
+    <ClCompile Include="FloodingScene.cpp" />
+    <ClCompile Include="FloodingView.cpp" />
+    <ClCompile Include="FloorplanManager.cpp" />
+    <ClCompile Include="GridPointItem.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -91,6 +96,13 @@
   </ItemGroup>
   <ItemGroup>
     <QtRcc Include="flooding.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="FloodingScene.h" />
+    <ClInclude Include="FloodingView.h" />
+    <ClInclude Include="FloorplanManager.h" />
+    <ClInclude Include="GridPointItem.h" />
+    <ClInclude Include="type.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
