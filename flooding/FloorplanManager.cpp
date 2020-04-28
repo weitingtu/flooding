@@ -221,7 +221,7 @@ FloorplanManager::_generate_grid_point(const std::vector<int>& xx, const std::ve
 		std::vector<GridPoint>& grid = grids.at(x);
 		grid.resize(yy.size());
 	    int y_size = grid.size();
-		for (size_t y = 0; y < grid.size(); ++y)
+		for (size_t y = 0; y < grids.at(x).size(); ++y)
 		{
 			GridPoint& p = grid.at(y);
 			p.is_valid  = true;
@@ -377,6 +377,10 @@ void FloorplanManager::_find_target()
 	    for (size_t y = 0; y < _grids.at(x).size(); ++y)
     	{
 			GridPoint& point = _get_grid_point(x, y);
+			if (!point.is_valid)
+			{
+				continue;
+			}
 			point.total_dis = 0;
 			for (size_t i = 0; i < point.distance.size(); ++i)
 			{

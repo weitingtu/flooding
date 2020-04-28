@@ -7,43 +7,34 @@ void GridPointItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* opt
 	painter->save();
 	const FloorplanManager& m = get_floorplan_manager();
 	const GridPoint& p = m.get_grids().at(_x_idx).at(_y_idx);
+	QPen pen;
+	QBrush brush;
 	if (!p.is_valid)
 	{
-		QPen pen(Qt::gray, 1, Qt::SolidLine);
-		QBrush brush;
-		brush.setColor(Qt::gray);
-		painter->setPen(pen);
-		painter->setBrush(brush);
-	    painter->drawEllipse(rect());
+	    pen = QPen(Qt::gray, 1, Qt::SolidLine);
 	}
 	else if (p.is_source)
 	{
-    	QPen pen(Qt::red, 1, Qt::SolidLine);
-		QBrush brush;
-		brush.setColor(Qt::red);
-		painter->setPen(pen);
-		painter->setBrush(brush);
-	    painter->drawEllipse(rect());
+    	pen = QPen(Qt::red, 1, Qt::SolidLine);
 	}
 	else if (p.is_target)
 	{
-    	QPen pen(Qt::blue, 1, Qt::SolidLine);
-		QBrush brush;
-		brush.setColor(Qt::blue);
-		painter->setPen(pen);
-		painter->setBrush(brush);
-	    painter->drawEllipse(rect());
+    	pen = QPen(Qt::blue, 1, Qt::SolidLine);
 	}
 	else
 	{
-		QPen pen(Qt::cyan, 1, Qt::SolidLine);
-		QBrush brush;
-		brush.setColor(Qt::cyan);
-		painter->setPen(pen);
-		painter->setBrush(brush);
-	    painter->drawEllipse(rect());
+		pen = QPen(Qt::cyan, 1, Qt::SolidLine);
 	}
-	//painter->drawEllipse(rect());
+
+	if (p.is_target)
+	{
+		brush = QBrush(Qt::blue);
+	}
+
+    painter->setPen(pen);
+    painter->setBrush(brush);
+    painter->drawEllipse(rect());
+
 	painter->restore();
 
 	//std::string text = std::to_string(_x_idx) + "," + std::to_string(_y_idx);

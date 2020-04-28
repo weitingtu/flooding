@@ -65,6 +65,10 @@ void FloodingScene::add_grid_point()
 		for (size_t y = 0; y < m.get_grids().at(x).size(); ++y)
 		{
 			const GridPoint& p = m.get_grids()[x][y];
+			if (!p.is_valid)
+			{
+				continue;
+			}
 			GridPointItem* item = new GridPointItem(p.p, p.idx.x, p.idx.y);
 			addItem(item);
 		}
@@ -81,6 +85,10 @@ void FloodingScene::add_grid_seg()
 		{
 			const GridPoint& p1 = m.get_grids()[x][y];
 			const GridPoint& p2 = m.get_grids()[x + 1][y];
+			if (!p1.is_valid || !p2.is_valid)
+			{
+				continue;
+			}
 			if (p1.right.x < 0)
 			{
 				continue;
@@ -94,6 +102,10 @@ void FloodingScene::add_grid_seg()
 		{
 			const GridPoint& p1 = m.get_grids()[x][y];
 			const GridPoint& p2 = m.get_grids()[x][y+1];
+			if (!p1.is_valid || !p2.is_valid)
+			{
+				continue;
+			}
 			if (p1.bottom.x < 0)
 			{
 				continue;
