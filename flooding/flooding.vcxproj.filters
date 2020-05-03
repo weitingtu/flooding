@@ -43,6 +43,12 @@
     <ClCompile Include="GridPointItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DisplayManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GridLineItem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtMoc Include="flooding.h">
@@ -73,6 +79,12 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="GridPointItem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GridLineItem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

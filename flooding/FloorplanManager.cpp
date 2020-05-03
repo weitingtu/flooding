@@ -2,26 +2,31 @@
 #include "type.h"
 #include <queue>
 #include <numeric>
+#include <set>
 
 Flooding::Flooding(const std::vector<std::vector<GridPoint>>& grids):
 	queue(),
 	color(),
 	distance(),
-	predecessor()
+	predecessor(),
+	predecessors()
 {
 	color.resize(grids.size());
 	distance.resize(grids.size());
 	predecessor.resize(grids.size());
+	predecessors.resize(grids.size());
 
 	for (size_t x = 0; x < grids.size(); ++x)
 	{
 		color.at(x).resize(grids.at(x).size());
 		distance.at(x).resize(grids.at(x).size(), std::numeric_limits<int>::max());
 		predecessor.at(x).resize(grids.at(x).size());
+		predecessors.at(x).resize(grids.at(x).size());
 	}
 }
 
 FloorplanManager::FloorplanManager():
+	_flooded(false),
     _site(0, 0, default_width, default_height) ,
     _num_rect(default_num_rect),
 	_num_point(default_num_point),
@@ -50,11 +55,12 @@ void FloorplanManager::generate(int width, int height, int num_rect, int num_poi
 	_generate_points();
 	_generate_grid();
 
-	_flooding();
+	//_flooding();
 }
 
 void FloorplanManager::clear()
 {
+	_flooded = false;
 	_site = QRect();
 	_num_rect = 0;
 	_num_point = 0;
@@ -261,7 +267,10 @@ FloorplanManager::_generate_grid_point(const std::vector<int>& xx, const std::ve
 			}
 			p.distance.resize(_points.size(), std::numeric_limits<int>::max());
 			p.predecessor.resize(_points.size());
-			p.total_dis = std::numeric_limits<int>::max();
+			p.predecessors.resize(_points.size());
+			p.pred.resize(_points.size());
+			p.total_dis  = std::numeric_limits<int>::max();
+			p.total_pred = std::numeric_limits<int>::max();
 		}
 	}
 
@@ -362,13 +371,17 @@ void FloorplanManager::_init_flooding()
 		{
 			_grids.at(x).at(y).distance.clear();
 			_grids.at(x).at(y).predecessor.clear();
+			_grids.at(x).at(y).predecessors.clear();
+			_grids.at(x).at(y).pred.clear();
 			_grids.at(x).at(y).distance.resize(_sources.size(), std::numeric_limits<int>::max());
 			_grids.at(x).at(y).predecessor.resize(_sources.size());
+			_grids.at(x).at(y).predecessors.resize(_sources.size());
+			_grids.at(x).at(y).pred.resize(_sources.size(), 0);
 		}
 	}
 }
 
-void FloorplanManager::_find_target()
+GridPointIdx FloorplanManager::_find_target()
 {
 	GridPointIdx idx;
 	int min_dis = std::numeric_limits<int>::max();
@@ -404,16 +417,110 @@ void FloorplanManager::_find_target()
 		GridPoint& point = _get_grid_point(idx);
 		point.is_target = true;
 	}
+
+	return idx;
+}
+
+void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i)
+{
+	const GridPointIdx& source = _sources.at(i);
+
+	while (idx != source)
+	{
+		GridPoint& point = _get_grid_point(idx);
+		int pred = 0;
+		for (size_t j = 0; j < point.predecessors.at(i).size(); ++j)
+		{
+			const GridPointIdx& pred_idx = point.predecessors.at(i).at(j);
+		    const GridPoint& pred_point  = _get_grid_point(pred_idx);
+			if (pred < pred_point.pred.at(i))
+			{
+				pred = pred_point.pred.at(i);
+				idx = pred_idx;
+			}
+		}
+		point.predecessor.at(i) = idx;
+	}
+}
+
+void FloorplanManager::_back_trace(const GridPointIdx& idx, size_t i)
+{
+	std::set<GridPointIdx> set;
+	std::queue<GridPointIdx> queue;
+	queue.push(idx);
+
+	while (!queue.empty())
+	{
+		GridPointIdx p = queue.front();
+		queue.pop();
+		if (set.find(p) != set.end())
+		{
+			continue;
+		}
+
+		set.insert(p);
+		GridPoint& point = _get_grid_point(p);
+		point.pred.at(i) = 1;
+		for (size_t j = 0; j < point.predecessors.at(i).size(); ++j)
+		{
+			queue.push(point.predecessors.at(i).at(j));
+		}
+	}
+}
+
+void FloorplanManager::_back_trace(const GridPointIdx& idx)
+{
+	if (idx.x < 0 || idx.y < 0)
+	{
+		printf("error, unable to back-trace\n");
+		return;
+	}
+
+	for (size_t i = 0; i < _sources.size(); ++i)
+	{
+		_back_trace(idx, i);
+	}
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			GridPoint& p = _get_grid_point(x, y);
+			p.total_pred = std::accumulate(p.pred.begin(), p.pred.end(), 0);
+		}
+	}
+
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			GridPoint& p = _get_grid_point(x, y);
+	        for (size_t i = 0; i < _sources.size(); ++i)
+			{ 
+			    p.predecessor.at(i) = GridPointIdx();
+			}
+		}
+	}
+	for (size_t i = 0; i < _sources.size(); ++i)
+	{
+		_back_trace_by_pred(idx, i);
+	}
 }
 
 void FloorplanManager::_flooding()
 {
+	if (_flooded)
+	{
+		return;
+	}
+	_flooded = true;
+
 	_init_flooding();
 	for (size_t i = 0; i < _sources.size(); ++i)
 	{
 		_flooding(i, _sources.at(i));
 	}
-	_find_target();
+	GridPointIdx idx = _find_target();
+	_back_trace(idx);
 }
 
 void FloorplanManager::_flooding(const GridPointIdx& idx, const GridPoint& from, const GridPointIdx& to_idx, Flooding& f)
@@ -434,10 +541,16 @@ void FloorplanManager::_flooding(const GridPointIdx& idx, const GridPoint& from,
 	}
 	const GridPoint& to = _get_grid_point(to_idx);
 	int dis = abs(from.p.x() - to.p.x()) + abs(from.p.y() - to.p.y()) + f.get_distance(idx);
-	if (dis < f.get_distance(to_idx))
+	if (dis == f.get_distance(to_idx))
+	{
+		f.add_predecessors(to_idx, idx);
+	}
+	else if (dis < f.get_distance(to_idx))
 	{
 		f.set_distance(to_idx, dis);
-		f.set_predecessor(to_idx, idx);
+		//f.set_predecessor(to_idx, idx);
+		f.clear_predecessors(to_idx, idx);
+		f.add_predecessors(to_idx, idx);
 	}
 }
 
@@ -452,6 +565,7 @@ void FloorplanManager::_flooding(size_t s_idx, const GridPointIdx& source)
 			GridPoint& point = _get_grid_point(x, y);
 			point.distance.at(s_idx) = std::numeric_limits<int>::max();
 			point.predecessor.at(s_idx) = GridPointIdx();
+			point.predecessors.at(s_idx).clear();
 		}
 	}
 
@@ -478,7 +592,8 @@ void FloorplanManager::_flooding(size_t s_idx, const GridPointIdx& source)
 		{
 			GridPoint& point = _get_grid_point(x, y);
 			point.distance.at(s_idx) = f.get_distance(x, y);
-			point.predecessor.at(s_idx) = f.get_predecessor(x, y);
+			//point.predecessor.at(s_idx) = f.get_predecessor(x, y);
+			point.predecessors.at(s_idx) = f.get_predecessors(x, y);
 		}
 	}
 }

@@ -3,30 +3,27 @@
 #include <QRect>
 #include <vector>
 #include <queue>
+#include "type.h"
 
-	struct GridPointIdx
-	{
-		GridPointIdx() : x(-1), y(-1) {}
-		GridPointIdx(int x_idx, int y_idx) : x(x_idx), y(y_idx) {}
-		int x;
-		int y;
-	};
-	struct GridPoint {
-		bool is_valid;
-		bool is_source;
-		bool is_target;
-		int x;
-		int y;
-		QPoint p;
-		GridPointIdx idx;
-		GridPointIdx top;
-		GridPointIdx bottom;
-		GridPointIdx right;
-		GridPointIdx left;
-		std::vector<int>   distance;
-		std::vector<GridPointIdx> predecessor;
-		int total_dis;
-	};
+struct GridPoint {
+	bool is_valid;
+	bool is_source;
+	bool is_target;
+	int x;
+	int y;
+	QPoint p;
+	GridPointIdx idx;
+	GridPointIdx top;
+	GridPointIdx bottom;
+	GridPointIdx right;
+	GridPointIdx left;
+	std::vector<int> distance;
+	std::vector<GridPointIdx> predecessor;
+	std::vector<std::vector<GridPointIdx>> predecessors;
+	std::vector<int> pred;
+	int total_dis;
+	int total_pred;
+};
 
 enum class Color
 {
@@ -43,18 +40,23 @@ public:
 	std::vector<std::vector<Color> > color;
 	std::vector<std::vector<int> >   distance;
 	std::vector<std::vector<GridPointIdx> > predecessor;
+	std::vector<std::vector<std::vector<GridPointIdx> > > predecessors;
 
 	Color get_color(const GridPointIdx& i) const { return color.at(i.x).at(i.y); }
 	int get_distance(const GridPointIdx& i) const { return distance.at(i.x).at(i.y); }
 	const GridPointIdx& get_predecessor(const GridPointIdx& i) const { return predecessor.at(i.x).at(i.y); }
+	const std::vector<GridPointIdx>& get_predecessors(const GridPointIdx& i) const { return predecessors.at(i.x).at(i.y); }
 
 	Color get_color(int x, int y) const { return color.at(x).at(y); }
 	int get_distance(int x, int y) const { return distance.at(x).at(y); }
 	const GridPointIdx& get_predecessor(int x, int y) const { return predecessor.at(x).at(y); }
+	const std::vector<GridPointIdx>& get_predecessors(int x, int y) const { return predecessors.at(x).at(y); }
 
 	void set_color(const GridPointIdx& i, Color c) { color.at(i.x).at(i.y) = c; }
 	void set_distance(const GridPointIdx& i, int d) { distance.at(i.x).at(i.y) = d; }
 	void set_predecessor(const GridPointIdx& i, const GridPointIdx& p) { predecessor.at(i.x).at(i.y) = p; }
+	void add_predecessors(const GridPointIdx& i, const GridPointIdx& p) { predecessors.at(i.x).at(i.y).push_back(p); }
+	void clear_predecessors(const GridPointIdx& i, const GridPointIdx& p) { predecessors.at(i.x).at(i.y).clear(); }
 };
 
 class FloorplanManager
@@ -79,6 +81,8 @@ public:
 	const std::vector<int>& get_x() const { return _x; }
 	const std::vector<int>& get_y() const { return _y; }
 	const std::vector<std::vector<GridPoint>>& get_grids() const { return _grids; }
+	const std::vector<GridPointIdx>& get_sources() const { return _sources; }
+	bool is_flooded() const { return _flooded;  }
 
 private:
 	QRect  _generate_random_rect() const;
@@ -106,7 +110,10 @@ private:
 	void _flooding();
 	void _flooding(const GridPointIdx& from_idx, const GridPoint& from, const GridPointIdx& to_idx, Flooding& f);
 	void _flooding(size_t s_idx, const GridPointIdx& source);
-	void _find_target();
+	GridPointIdx _find_target();
+	void _back_trace_by_pred(GridPointIdx idx, size_t i);
+	void _back_trace(const GridPointIdx& idx, size_t i);
+	void _back_trace(const GridPointIdx& idx );
 
 	GridPoint& _get_grid_point(size_t x, size_t y) { return _grids.at(x).at(y); }
 	GridPoint& _get_grid_point(const GridPointIdx& i) { return _grids.at(i.x).at(i.y); }
@@ -120,6 +127,7 @@ private:
 	std::vector<int> _y;
 	std::vector<std::vector<GridPoint>> _grids;
 	std::vector<GridPointIdx> _sources;
+	bool _flooded;
 };
 
 static FloorplanManager& get_floorplan_manager() 

@@ -1,5 +1,6 @@
 #include "GridPointItem.h"
 #include "FloorplanManager.h"
+#include "DisplayManager.h"
 #include <QPainter>
 
 void GridPointItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget )
@@ -37,13 +38,32 @@ void GridPointItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* opt
 
 	painter->restore();
 
-	//std::string text = std::to_string(_x_idx) + "," + std::to_string(_y_idx);
-	//text += " ";
-	//text += std::to_string(p.distance.at(0));
-	//std::string text = std::to_string(p.distance.at(0));
-	//std::string text = std::to_string(p.distance.at(1));
-	//std::string text = std::to_string(p.distance.at(0));
-	std::string text = std::to_string(p.total_dis);
+    const DisplayManager& dm = get_display_manager();
+	std::string text;
+	if (dm.is_indivisual_flooding())
+	{
+		int idx = dm.get_indivisual_flooding_idx();
+		if (idx < p.distance.size())
+		{
+        	text = std::to_string(p.distance.at(idx));
+		}
+	}
+	else if (dm.is_total_flooding())
+	{
+        text = std::to_string(p.total_dis);
+	}
+	else if (dm.is_indivisual_pred())
+	{
+		int idx = dm.get_indivisual_pred_idx();
+		if (idx < p.pred.size())
+		{
+        	text = std::to_string(p.pred.at(idx));
+		}
+	}
+	else if (dm.is_total_pred())
+	{
+        text = std::to_string(p.total_pred);
+	}
 	_draw_text(painter, rect(), text.c_str());
 }
 

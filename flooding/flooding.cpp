@@ -2,6 +2,7 @@
 #include "FloodingView.h"
 #include "FloodingScene.h"
 #include "FloorplanManager.h"
+#include "DisplayManager.h"
 #include "type.h"
 #include <QGridLayout>
 #include <QLabel>
@@ -9,9 +10,18 @@
 #include <QDockWidget>
 #include <QPushButton>
 #include <QIntValidator>
+#include <QGroupBox>
+#include <QRadioButton>
+#include <QSpinBox>
 
 flooding::flooding(QWidget *parent)
 	: QMainWindow(parent),
+	_individual_flooding_radio(nullptr),
+	_total_flooding_radio(nullptr),
+	_individual_pred_radio(nullptr),
+	_total_pred_radio(nullptr),
+	_flooding_spin_box(nullptr),
+	_pred_spin_box(nullptr),
 	_width_line_edit(nullptr),
 	_height_line_edit(nullptr),
 	_num_rect_line_edit(nullptr),
@@ -27,6 +37,7 @@ flooding::flooding(QWidget *parent)
 	get_floorplan_manager().init();
 
 	_view = new FloodingView(this);
+	//_view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
 	_scene = new FloodingScene(this);
 	_scene->init();
 	_view->setScene(_scene);
@@ -38,6 +49,9 @@ void flooding::_create_dock_widget()
 	QWidget* panel = new QWidget(this);
 	QGridLayout* layout = new QGridLayout;
 	int idx = 0;
+
+	layout->addWidget(_create_exclusive_group(), idx, 0, 1, 2);
+	++idx;
 
 	QLabel* width_label = new QLabel("Width: ");
 	_width_line_edit = new QLineEdit;
@@ -92,12 +106,55 @@ void flooding::_create_dock_widget()
 	addDockWidget(Qt::RightDockWidgetArea, dock);
 }
 
+QGroupBox* flooding::_create_exclusive_group()
+{
+	QGroupBox *groupBox = new QGroupBox(tr("Display:"));
+	_individual_flooding_radio = new QRadioButton(tr("&Individual flooding"));
+	_total_flooding_radio = new QRadioButton(tr("&Total flooding"));
+	_individual_pred_radio = new QRadioButton(tr("&Individual pred"));
+	_total_pred_radio = new QRadioButton(tr("&Total pred"));
+
+	_total_flooding_radio->setChecked(true);
+	get_display_manager().set_total_flooding(true);
+
+	connect(_individual_flooding_radio, SIGNAL(clicked(bool)), this, SLOT(_set_display()));
+	connect(_total_flooding_radio,      SIGNAL(clicked(bool)), this, SLOT(_set_display()));
+	connect(_individual_pred_radio,     SIGNAL(clicked(bool)), this, SLOT(_set_display()));
+	connect(_total_pred_radio,          SIGNAL(clicked(bool)), this, SLOT(_set_display()));
+
+	_flooding_spin_box = new QSpinBox(this);
+	_flooding_spin_box->setMinimum(0);
+	_flooding_spin_box->setMaximum(default_num_point - 1);
+
+	connect(_flooding_spin_box, SIGNAL(valueChanged(int)), this, SLOT(_set_display()));
+
+	_pred_spin_box = new QSpinBox(this);
+	_pred_spin_box->setMinimum(0);
+	_pred_spin_box->setMaximum(default_num_point - 1);
+
+	connect(_pred_spin_box, SIGNAL(valueChanged(int)), this, SLOT(_set_display()));
+
+	QVBoxLayout *vbox = new QVBoxLayout;
+	vbox->addWidget(_individual_flooding_radio);
+	vbox->addWidget(_flooding_spin_box);
+	vbox->addWidget(_total_flooding_radio);
+	vbox->addWidget(_individual_pred_radio);
+	vbox->addWidget(_pred_spin_box);
+	vbox->addWidget(_total_pred_radio);
+	vbox->addStretch(1);
+	groupBox->setLayout(vbox);
+
+	return groupBox;
+}
+
 void flooding::_generate() const
 {
 	int width  = _width_line_edit->text().toInt();
 	int height = _height_line_edit->text().toInt();
 	int num_rect  = _num_rect_line_edit->text().toInt();
 	int num_point = _num_point_line_edit->text().toInt();
+
+	_flooding_spin_box->setMaximum(num_point - 1);
 
 	_scene->clear();
 	get_floorplan_manager().generate(width, height, num_rect, num_point);
@@ -107,5 +164,19 @@ void flooding::_generate() const
 
 void flooding::_flooding() const
 {
+	_scene->clear();
 	get_floorplan_manager().flooding();
+	_scene->init();
+}
+
+void flooding::_set_display() const
+{
+    DisplayManager& dm = get_display_manager();
+	dm.set_indivisual_flooding(_individual_flooding_radio->isChecked());
+	dm.set_indivisual_flooding_idx(_flooding_spin_box->value());
+	dm.set_total_flooding(_total_flooding_radio->isChecked());
+	dm.set_indivisual_pred(_individual_pred_radio->isChecked());
+	dm.set_indivisual_pred_idx(_pred_spin_box->value());
+	dm.set_total_pred(_total_pred_radio->isChecked());
+	_scene->update();
 }

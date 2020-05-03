@@ -2,6 +2,7 @@
 #include "type.h"
 #include "FloorplanManager.h"
 #include "GridPointItem.h"
+#include "GridLineItem.h"
 
 FloodingScene::FloodingScene(QObject* parent ) : QGraphicsScene(parent)
 {}
@@ -21,7 +22,7 @@ void FloodingScene::init()
 void FloodingScene::add_rect()
 {
 	const FloorplanManager& m = get_floorplan_manager();
-	QPen pen;
+	QPen pen(Qt::cyan);
 	QBrush brush(Qt::cyan);
 	for (const QRect& rect : m.get_rects())
 	{
@@ -93,7 +94,10 @@ void FloodingScene::add_grid_seg()
 			{
 				continue;
 			}
-		    addLine(QLineF(p1.p, p2.p), pen);
+			GridLineItem* item = new GridLineItem(p1.idx, p2.idx, QLineF(p1.p, p2.p));
+			item->setPen(pen);
+			addItem(item);
+		    //addLine(QLineF(p1.p, p2.p), pen);
 		}
 	}
 	for (size_t x = 0; x < m.get_grids().size(); ++x)
@@ -110,7 +114,10 @@ void FloodingScene::add_grid_seg()
 			{
 				continue;
 			}
-		    addLine(QLineF(p1.p, p2.p), pen);
+			GridLineItem* item = new GridLineItem(p1.idx, p2.idx, QLineF(p1.p, p2.p));
+			item->setPen(pen);
+			addItem(item);
+		    //addLine(QLineF(p1.p, p2.p), pen);
 		}
 	}
 }
