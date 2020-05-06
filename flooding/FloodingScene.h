@@ -9,6 +9,7 @@ public:
 	FloodingScene(QObject* parent = nullptr);
 
 	void init();
+	void init_point_rect();
 
 private:
 

@@ -16,9 +16,9 @@
 
 flooding::flooding(QWidget *parent)
 	: QMainWindow(parent),
-	_individual_flooding_radio(nullptr),
+	_idv_flooding_radio(nullptr),
 	_total_flooding_radio(nullptr),
-	_individual_pred_radio(nullptr),
+	_idv_pred_radio(nullptr),
 	_total_pred_radio(nullptr),
 	_flooding_spin_box(nullptr),
 	_pred_spin_box(nullptr),
@@ -27,7 +27,10 @@ flooding::flooding(QWidget *parent)
 	_num_rect_line_edit(nullptr),
 	_num_point_line_edit(nullptr),
 	_generate_button(nullptr),
+	_hanan_grid_button(nullptr),
 	_flooding_button(nullptr),
+	_idv_backtracking_button(nullptr),
+	_backtracking_button(nullptr),
 	_view(nullptr),
 	_scene(nullptr)
 {
@@ -90,9 +93,24 @@ void flooding::_create_dock_widget()
 	connect(_generate_button, SIGNAL(released()), this, SLOT(_generate()));
 	++idx;
 
+	_hanan_grid_button = new QPushButton("Hana grid");
+	layout->addWidget(_hanan_grid_button, idx, 0, 1, 2);
+	connect(_hanan_grid_button, SIGNAL(released()), this, SLOT(_hanan_grid()));
+	++idx;
+
 	_flooding_button = new QPushButton("Flooding");
 	layout->addWidget(_flooding_button, idx, 0, 1, 2);
 	connect(_flooding_button, SIGNAL(released()), this, SLOT(_flooding()));
+	++idx;
+
+	_idv_backtracking_button = new QPushButton("Individual backtracking");
+	layout->addWidget(_idv_backtracking_button, idx, 0, 1, 2);
+	connect(_idv_backtracking_button, SIGNAL(released()), this, SLOT(_idv_backtracking()));
+	++idx;
+
+	_backtracking_button = new QPushButton("Backtracking");
+	layout->addWidget(_backtracking_button, idx, 0, 1, 2);
+	connect(_backtracking_button, SIGNAL(released()), this, SLOT(_backtracking()));
 	++idx;
 
 	QWidget* empty = new QWidget();
@@ -109,17 +127,17 @@ void flooding::_create_dock_widget()
 QGroupBox* flooding::_create_exclusive_group()
 {
 	QGroupBox *groupBox = new QGroupBox(tr("Display:"));
-	_individual_flooding_radio = new QRadioButton(tr("&Individual flooding"));
+	_idv_flooding_radio = new QRadioButton(tr("&Individual flooding"));
 	_total_flooding_radio = new QRadioButton(tr("&Total flooding"));
-	_individual_pred_radio = new QRadioButton(tr("&Individual pred"));
-	_total_pred_radio = new QRadioButton(tr("&Total pred"));
+	_idv_pred_radio = new QRadioButton(tr("&Individual backtracking"));
+	_total_pred_radio = new QRadioButton(tr("&Total backtracking"));
 
 	_total_flooding_radio->setChecked(true);
 	get_display_manager().set_total_flooding(true);
 
-	connect(_individual_flooding_radio, SIGNAL(clicked(bool)), this, SLOT(_set_display()));
+	connect(_idv_flooding_radio, SIGNAL(clicked(bool)), this, SLOT(_set_display()));
 	connect(_total_flooding_radio,      SIGNAL(clicked(bool)), this, SLOT(_set_display()));
-	connect(_individual_pred_radio,     SIGNAL(clicked(bool)), this, SLOT(_set_display()));
+	connect(_idv_pred_radio,     SIGNAL(clicked(bool)), this, SLOT(_set_display()));
 	connect(_total_pred_radio,          SIGNAL(clicked(bool)), this, SLOT(_set_display()));
 
 	_flooding_spin_box = new QSpinBox(this);
@@ -135,10 +153,10 @@ QGroupBox* flooding::_create_exclusive_group()
 	connect(_pred_spin_box, SIGNAL(valueChanged(int)), this, SLOT(_set_display()));
 
 	QVBoxLayout *vbox = new QVBoxLayout;
-	vbox->addWidget(_individual_flooding_radio);
+	vbox->addWidget(_idv_flooding_radio);
 	vbox->addWidget(_flooding_spin_box);
 	vbox->addWidget(_total_flooding_radio);
-	vbox->addWidget(_individual_pred_radio);
+	vbox->addWidget(_idv_pred_radio);
 	vbox->addWidget(_pred_spin_box);
 	vbox->addWidget(_total_pred_radio);
 	vbox->addStretch(1);
@@ -155,10 +173,17 @@ void flooding::_generate() const
 	int num_point = _num_point_line_edit->text().toInt();
 
 	_flooding_spin_box->setMaximum(num_point - 1);
+	_pred_spin_box->setMaximum(num_point - 1);
 
 	_scene->clear();
 	get_floorplan_manager().generate(width, height, num_rect, num_point);
-	//get_floorplan_manager().flooding();
+	//_scene->init();
+	_scene->init_point_rect();
+}
+
+void flooding::_hanan_grid() const
+{
+	_scene->clear();
 	_scene->init();
 }
 
@@ -169,14 +194,29 @@ void flooding::_flooding() const
 	_scene->init();
 }
 
+void flooding::_idv_backtracking() const
+{
+	_scene->clear();
+	get_floorplan_manager().idv_backtracking();
+	_scene->init();
+}
+
+void flooding::_backtracking() const
+{
+	_scene->clear();
+	get_floorplan_manager().backtracking();
+	_scene->init();
+}
+
 void flooding::_set_display() const
 {
     DisplayManager& dm = get_display_manager();
-	dm.set_indivisual_flooding(_individual_flooding_radio->isChecked());
+	dm.set_indivisual_flooding(_idv_flooding_radio->isChecked());
 	dm.set_indivisual_flooding_idx(_flooding_spin_box->value());
 	dm.set_total_flooding(_total_flooding_radio->isChecked());
-	dm.set_indivisual_pred(_individual_pred_radio->isChecked());
+	dm.set_indivisual_pred(_idv_pred_radio->isChecked());
 	dm.set_indivisual_pred_idx(_pred_spin_box->value());
 	dm.set_total_pred(_total_pred_radio->isChecked());
 	_scene->update();
 }
+

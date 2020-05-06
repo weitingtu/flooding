@@ -13,6 +13,7 @@ struct GridPointIdx
 	GridPointIdx(int x_idx, int y_idx) : x(x_idx), y(y_idx) {}
 	int x;
 	int y;
+	bool is_valid() const { return x >= 0 && y >= 0; }
 	bool operator < (const GridPointIdx& rhs) const
 	{
 		return std::tie(x, y) < std::tie(rhs.x, rhs.y);

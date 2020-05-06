@@ -26,13 +26,21 @@ Flooding::Flooding(const std::vector<std::vector<GridPoint>>& grids):
 }
 
 FloorplanManager::FloorplanManager():
-	_flooded(false),
     _site(0, 0, default_width, default_height) ,
     _num_rect(default_num_rect),
 	_num_point(default_num_point),
 	_rects(),
 	_points(),
-	_sources()
+	_x(),
+	_y(),
+	_grids(),
+	_sources(),
+	_flooded(false),
+	_backtracked(false),
+	_total_pred_updated(false),
+	_idv_backtracking_idx(0),
+	_idv_backtracking_by_pred_idx(0),
+	_target_idx()
 	{}
 
 void FloorplanManager::init()
@@ -41,7 +49,8 @@ void FloorplanManager::init()
 	_generate_points();
 	_generate_grid();
 
-	_flooding();
+	flooding();
+	backtracking();
 }
 
 void FloorplanManager::generate(int width, int height, int num_rect, int num_point)
@@ -54,13 +63,16 @@ void FloorplanManager::generate(int width, int height, int num_rect, int num_poi
 	_generate_rects();
 	_generate_points();
 	_generate_grid();
-
-	//_flooding();
 }
 
 void FloorplanManager::clear()
 {
 	_flooded = false;
+	_backtracked = false;
+	_total_pred_updated = false;
+	_idv_backtracking_idx = 0;
+	_idv_backtracking_by_pred_idx = 0;
+	_target_idx = GridPointIdx();
 	_site = QRect();
 	_num_rect = 0;
 	_num_point = 0;
@@ -72,9 +84,50 @@ void FloorplanManager::clear()
 	_sources.clear();
 }
 
-void FloorplanManager::flooding()
+void FloorplanManager::idv_backtracking()
 {
-	_flooding();
+	if (!_target_idx.is_valid())
+	{
+		printf("error, target idx is not valid\n");
+		return;
+	}
+
+	if(_idv_backtracking_idx < _sources.size())
+	{
+		_back_trace(_target_idx, _idv_backtracking_idx);
+		++_idv_backtracking_idx;
+	}
+	else if(!_total_pred_updated)
+	{
+		_total_pred_updated = true;
+	    _update_total_pred();
+	    _clear_pred();
+	}
+	else if(_idv_backtracking_by_pred_idx < _sources.size())
+	{
+		_back_trace_by_pred(_target_idx, _idv_backtracking_by_pred_idx);
+		++_idv_backtracking_by_pred_idx;
+	}
+}
+
+void FloorplanManager::backtracking()
+{
+	if (_idv_backtracking_by_pred_idx >= _sources.size())
+	{
+		return;
+	}
+	if (_backtracked)
+	{
+		return;
+	}
+	if (!_target_idx.is_valid())
+	{
+		printf("error, target idx is not valid\n");
+		return;
+	}
+	_backtracked = true;
+
+	_back_trace(_target_idx);
 }
 
 bool FloorplanManager::_is_in_site(const QRect& rect) const
@@ -269,8 +322,9 @@ FloorplanManager::_generate_grid_point(const std::vector<int>& xx, const std::ve
 			p.predecessor.resize(_points.size());
 			p.predecessors.resize(_points.size());
 			p.pred.resize(_points.size());
-			p.total_dis  = std::numeric_limits<int>::max();
-			p.total_pred = std::numeric_limits<int>::max();
+			p.total_dis      = std::numeric_limits<int>::max();
+			p.total_pred     = std::numeric_limits<int>::max();
+			p.total_pred_dis = std::numeric_limits<int>::max();
 		}
 	}
 
@@ -425,21 +479,38 @@ void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i)
 {
 	const GridPointIdx& source = _sources.at(i);
 
+	int total_pred = 0;
+	int total_pred_dis = 0;
 	while (idx != source)
 	{
 		GridPoint& point = _get_grid_point(idx);
-		int pred = 0;
+		int pred = -1;
+		int dis = 0;
 		for (size_t j = 0; j < point.predecessors.at(i).size(); ++j)
 		{
 			const GridPointIdx& pred_idx = point.predecessors.at(i).at(j);
 		    const GridPoint& pred_point  = _get_grid_point(pred_idx);
-			if (pred < pred_point.pred.at(i))
+			//if (pred < pred_point.pred.at(i))
+			if (pred < pred_point.total_pred)
 			{
-				pred = pred_point.pred.at(i);
+				//pred = pred_point.pred.at(i);
+				pred = pred_point.total_pred;
+				dis = abs(point.x - pred_point.x) + abs(point.y - point.y);
 				idx = pred_idx;
 			}
 		}
 		point.predecessor.at(i) = idx;
+		total_pred_dis += dis;
+		if (idx == source)
+		{
+			_get_grid_point(idx).total_pred     = total_pred;
+			_get_grid_point(idx).total_pred_dis = total_pred_dis;
+			break;
+		}
+		else
+		{
+			total_pred += pred;
+		}
 	}
 }
 
@@ -468,6 +539,45 @@ void FloorplanManager::_back_trace(const GridPointIdx& idx, size_t i)
 	}
 }
 
+void FloorplanManager::_update_total_pred()
+{
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			GridPoint& p = _get_grid_point(x, y);
+			if (p.is_target)
+			{
+				p.total_pred = 0;
+			}
+			else if (p.is_source)
+			{
+				continue;
+			}
+			else
+			{
+				int total_pred = std::accumulate(p.pred.begin(), p.pred.end(), 0);
+				p.total_pred = total_pred;
+			}
+		}
+	}
+}
+
+void FloorplanManager::_clear_pred()
+{
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			GridPoint& p = _get_grid_point(x, y);
+			for (size_t i = 0; i < _sources.size(); ++i)
+			{
+				p.predecessor.at(i) = GridPointIdx();
+			}
+		}
+	}
+}
+
 void FloorplanManager::_back_trace(const GridPointIdx& idx)
 {
 	if (idx.x < 0 || idx.y < 0)
@@ -479,34 +589,21 @@ void FloorplanManager::_back_trace(const GridPointIdx& idx)
 	for (size_t i = 0; i < _sources.size(); ++i)
 	{
 		_back_trace(idx, i);
-	}
-	for (size_t x = 0; x < _grids.size(); ++x)
-	{
-		for (size_t y = 0; y < _grids.at(x).size(); ++y)
-		{
-			GridPoint& p = _get_grid_point(x, y);
-			p.total_pred = std::accumulate(p.pred.begin(), p.pred.end(), 0);
-		}
+		_idv_backtracking_idx = i + 1;
 	}
 
-	for (size_t x = 0; x < _grids.size(); ++x)
-	{
-		for (size_t y = 0; y < _grids.at(x).size(); ++y)
-		{
-			GridPoint& p = _get_grid_point(x, y);
-	        for (size_t i = 0; i < _sources.size(); ++i)
-			{ 
-			    p.predecessor.at(i) = GridPointIdx();
-			}
-		}
-	}
+	_update_total_pred();
+	_clear_pred();
+	_total_pred_updated = true;
+	
 	for (size_t i = 0; i < _sources.size(); ++i)
 	{
 		_back_trace_by_pred(idx, i);
+		_idv_backtracking_by_pred_idx = i + 1;
 	}
 }
 
-void FloorplanManager::_flooding()
+void FloorplanManager::flooding()
 {
 	if (_flooded)
 	{
@@ -519,8 +616,8 @@ void FloorplanManager::_flooding()
 	{
 		_flooding(i, _sources.at(i));
 	}
-	GridPointIdx idx = _find_target();
-	_back_trace(idx);
+
+	_target_idx = _find_target();
 }
 
 void FloorplanManager::_flooding(const GridPointIdx& idx, const GridPoint& from, const GridPointIdx& to_idx, Flooding& f)

@@ -12,11 +12,18 @@ void FloodingScene::init()
 	clear();
 	const FloorplanManager& m = get_floorplan_manager();
 	addRect(m.get_site());
-	//add_grid_line();
 	add_rect();
 	add_grid_seg();
 	add_grid_point();
-	//add_point();
+}
+
+void FloodingScene::init_point_rect()
+{
+	clear();
+	const FloorplanManager& m = get_floorplan_manager();
+	addRect(m.get_site());
+	add_rect();
+	add_point();
 }
 
 void FloodingScene::add_rect()
@@ -33,8 +40,8 @@ void FloodingScene::add_rect()
 void FloodingScene::add_point()
 {
 	const FloorplanManager& m = get_floorplan_manager();
-	QPen pen;
-	QBrush brush(Qt::cyan);
+    QPen pen = QPen(Qt::red, 1, Qt::SolidLine);
+	QBrush brush;
 	for (const QPoint& p : m.get_points())
 	{
 		addEllipse(p.x() - radius, p.y() - radius , radius * 2, radius * 2, pen, brush);

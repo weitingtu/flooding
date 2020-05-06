@@ -23,6 +23,7 @@ struct GridPoint {
 	std::vector<int> pred;
 	int total_dis;
 	int total_pred;
+	int total_pred_dis;
 };
 
 enum class Color
@@ -74,6 +75,8 @@ public:
 	void generate(int width, int height, int num_rect, int num_point);
 	void clear();
 	void flooding();
+	void idv_backtracking();
+	void backtracking();
 
 	const QRect& get_site() const { return _site;  }
 	const std::vector<QRect>& get_rects() const { return _rects; }
@@ -114,6 +117,8 @@ private:
 	void _back_trace_by_pred(GridPointIdx idx, size_t i);
 	void _back_trace(const GridPointIdx& idx, size_t i);
 	void _back_trace(const GridPointIdx& idx );
+	void _update_total_pred();
+	void _clear_pred();
 
 	GridPoint& _get_grid_point(size_t x, size_t y) { return _grids.at(x).at(y); }
 	GridPoint& _get_grid_point(const GridPointIdx& i) { return _grids.at(i.x).at(i.y); }
@@ -128,6 +133,12 @@ private:
 	std::vector<std::vector<GridPoint>> _grids;
 	std::vector<GridPointIdx> _sources;
 	bool _flooded;
+	bool _backtracked;
+	bool _total_pred_updated;
+	size_t _idv_backtracking_idx;
+	size_t _idv_backtracking_by_pred_idx;
+	GridPointIdx _target_idx;
+
 };
 
 static FloorplanManager& get_floorplan_manager() 
