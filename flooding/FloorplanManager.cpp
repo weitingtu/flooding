@@ -35,6 +35,7 @@ FloorplanManager::FloorplanManager():
 	_y(),
 	_grids(),
 	_sources(),
+	_sources_to_complete(),
 	_flooded(false),
 	_backtracked(false),
 	_idv_backtracking_by_pred_idx(0),
@@ -78,6 +79,7 @@ void FloorplanManager::clear()
 	_y.clear();
 	_grids.clear();
 	_sources.clear();
+	_sources_to_complete.clear();
 }
 
 void FloorplanManager::backtrack()
@@ -99,13 +101,33 @@ void FloorplanManager::backtrack()
 	}
 	_update_total_pred();
 	_clear_pred();
+
+	// update source total_pred
+	for (size_t i = 0; i < _sources.size(); ++i)
+	{
+		_back_trace_by_pred(_target_idx, i);
+	}
+	_clear_pred();
+
+	_sources_to_complete.clear();
+	for (size_t i = 0; i < _sources.size(); ++i)
+	{
+		_sources_to_complete.push_back(IdxTotalPred(i, _get_grid_point(_sources.at(i)).total_pred));
+	}
+	std::sort(_sources_to_complete.begin(), _sources_to_complete.end(), std::greater<IdxTotalPred>());
 }
 
 void FloorplanManager::idv_complete_steiner_tree()
 {
-	if(_idv_backtracking_by_pred_idx < _sources.size())
+	if (_sources_to_complete.size() != _sources.size())
 	{
-		_back_trace_by_pred(_target_idx, _idv_backtracking_by_pred_idx);
+		printf("sources to complete size and sources size mismatch %zu != %zu\n", _sources_to_complete.size(), _sources.size());
+		return;
+	}
+	if(_idv_backtracking_by_pred_idx < _sources_to_complete.size())
+	{
+		const IdxTotalPred& id = _sources_to_complete.at(_idv_backtracking_by_pred_idx);
+		_back_trace_by_pred(_target_idx, id.idx);
 		++_idv_backtracking_by_pred_idx;
 	}
 }
@@ -127,15 +149,54 @@ void FloorplanManager::complete_steiner_tree()
 
 int FloorplanManager::get_total_pred_dis() const
 {
+	//int total_pred_dis = 0;
+	//for (size_t i = 0; i < _sources.size(); ++i)
+	//{
+	//	const GridPoint& point = _get_grid_point(_sources.at(i));
+	//	if (point.total_pred_dis != std::numeric_limits<int>::max())
+	//	{
+	//	    total_pred_dis += point.total_pred_dis;
+	//	}
+	//}
+
 	int total_pred_dis = 0;
-	for (size_t i = 0; i < _sources.size(); ++i)
+	for (size_t x = 0; x < _grids.size(); ++x)
 	{
-		const GridPoint& point = _get_grid_point(_sources.at(i));
-		if (point.total_pred_dis != std::numeric_limits<int>::max())
+		for (size_t y = 0; y < _grids.at(x).size() - 1; ++y)
 		{
-		    total_pred_dis += point.total_pred_dis;
+			GridPointIdx idx1(x, y);
+			GridPointIdx idx2(x, y + 1);
+	        const GridPoint& p1 = get_grids().at(idx1.x).at(idx1.y);
+	        const GridPoint& p2 = get_grids().at(idx2.x).at(idx2.y);
+			for (size_t i = 0; i < p1.predecessor.size(); ++i)
+			{
+				if (p1.predecessor.at(i) == idx2 || p2.predecessor.at(i) == idx1)
+				{
+					total_pred_dis += abs(p1.x - p2.x) + abs(p1.y - p2.y);
+					break;
+				}
+			}
 		}
 	}
+	for (size_t x = 0; x < _grids.size() - 1; ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			GridPointIdx idx1(x, y);
+			GridPointIdx idx2(x + 1, y);
+	        const GridPoint& p1 = get_grids().at(idx1.x).at(idx1.y);
+	        const GridPoint& p2 = get_grids().at(idx2.x).at(idx2.y);
+			for (size_t i = 0; i < p1.predecessor.size(); ++i)
+			{
+				if (p1.predecessor.at(i) == idx2 || p2.predecessor.at(i) == idx1)
+				{
+					total_pred_dis += abs(p1.x - p2.x) + abs(p1.y - p2.y);
+					break;
+				}
+			}
+		}
+	}
+
 
 	return total_pred_dis;
 }
@@ -558,10 +619,6 @@ void FloorplanManager::_update_total_pred()
 			{
 				p.total_pred = 0;
 			}
-			else if (p.is_source)
-			{
-				p.total_pred = std::accumulate(p.pred.begin(), p.pred.end(), 0);
-			}
 			else
 			{
 				p.total_pred = std::accumulate(p.pred.begin(), p.pred.end(), 0);
@@ -695,7 +752,6 @@ void FloorplanManager::_flooding(size_t s_idx, const GridPointIdx& source)
 		{
 			GridPoint& point = _get_grid_point(x, y);
 			point.distance.at(s_idx) = f.get_distance(x, y);
-			//point.predecessor.at(s_idx) = f.get_predecessor(x, y);
 			point.predecessors.at(s_idx) = f.get_predecessors(x, y);
 		}
 	}

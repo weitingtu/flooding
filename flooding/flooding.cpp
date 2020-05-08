@@ -200,6 +200,7 @@ void flooding::_hanan_grid() const
 
 void flooding::_flooding() const
 {
+	_total_flooding_radio->setChecked(true);
 	_scene->clear();
 	get_floorplan_manager().flooding();
 	_scene->init();

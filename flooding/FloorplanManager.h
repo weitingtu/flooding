@@ -126,6 +126,20 @@ private:
 	const GridPoint& _get_grid_point(size_t x, size_t y) const { return _grids.at(x).at(y); }
 	const GridPoint& _get_grid_point(const GridPointIdx& i) const { return _grids.at(i.x).at(i.y); }
 
+	struct IdxTotalPred 
+	{
+		IdxTotalPred(size_t i, int d) : idx(i), total_pred(d) {}
+		size_t idx;
+		int total_pred;
+		bool operator < (const IdxTotalPred& rhs) const
+		{
+			return std::tie(total_pred, idx) < std::tie(rhs.total_pred, rhs.idx);
+		}
+		bool operator > (const IdxTotalPred& rhs) const
+		{
+			return std::tie(total_pred, idx) > std::tie(rhs.total_pred, rhs.idx);
+		}
+	};
 	QRect _site;
 	int _num_rect;
 	int _num_point;
@@ -135,6 +149,7 @@ private:
 	std::vector<int> _y;
 	std::vector<std::vector<GridPoint>> _grids;
 	std::vector<GridPointIdx> _sources;
+	std::vector<IdxTotalPred>   _sources_to_complete;
 	bool _flooded;
 	bool _backtracked;
 	size_t _idv_backtracking_by_pred_idx;
