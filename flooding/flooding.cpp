@@ -29,8 +29,10 @@ flooding::flooding(QWidget *parent)
 	_generate_button(nullptr),
 	_hanan_grid_button(nullptr),
 	_flooding_button(nullptr),
-	_idv_backtracking_button(nullptr),
 	_backtracking_button(nullptr),
+	_idv_completed_steiner_tree_button(nullptr),
+	_completed_steiner_tree_button(nullptr),
+	_total_dis_label(nullptr),
 	_view(nullptr),
 	_scene(nullptr)
 {
@@ -38,9 +40,9 @@ flooding::flooding(QWidget *parent)
 	_create_dock_widget();
 
 	get_floorplan_manager().init();
+	_total_dis_label->setText(QString("Total distance : %1").arg(get_floorplan_manager().get_total_pred_dis()));
 
 	_view = new FloodingView(this);
-	//_view->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
 	_scene = new FloodingScene(this);
 	_scene->init();
 	_view->setScene(_scene);
@@ -103,14 +105,23 @@ void flooding::_create_dock_widget()
 	connect(_flooding_button, SIGNAL(released()), this, SLOT(_flooding()));
 	++idx;
 
-	_idv_backtracking_button = new QPushButton("Individual backtracking");
-	layout->addWidget(_idv_backtracking_button, idx, 0, 1, 2);
-	connect(_idv_backtracking_button, SIGNAL(released()), this, SLOT(_idv_backtracking()));
-	++idx;
-
 	_backtracking_button = new QPushButton("Backtracking");
 	layout->addWidget(_backtracking_button, idx, 0, 1, 2);
 	connect(_backtracking_button, SIGNAL(released()), this, SLOT(_backtracking()));
+	++idx;
+
+	_idv_completed_steiner_tree_button = new QPushButton("Completed steiner tree step by step");
+	layout->addWidget(_idv_completed_steiner_tree_button, idx, 0, 1, 2);
+	connect(_idv_completed_steiner_tree_button, SIGNAL(released()), this, SLOT(_idv_complete_steiner_tree()));
+	++idx;
+
+	_completed_steiner_tree_button = new QPushButton("Completed steiner tree");
+	layout->addWidget(_completed_steiner_tree_button, idx, 0, 1, 2);
+	connect(_completed_steiner_tree_button, SIGNAL(released()), this, SLOT(_complete_steiner_tree()));
+	++idx;
+
+	_total_dis_label = new QLabel("Total distance : 0");
+	layout->addWidget(_total_dis_label, idx, 0, 1, 2);
 	++idx;
 
 	QWidget* empty = new QWidget();
@@ -135,10 +146,10 @@ QGroupBox* flooding::_create_exclusive_group()
 	_total_flooding_radio->setChecked(true);
 	get_display_manager().set_total_flooding(true);
 
-	connect(_idv_flooding_radio, SIGNAL(clicked(bool)), this, SLOT(_set_display()));
-	connect(_total_flooding_radio,      SIGNAL(clicked(bool)), this, SLOT(_set_display()));
-	connect(_idv_pred_radio,     SIGNAL(clicked(bool)), this, SLOT(_set_display()));
-	connect(_total_pred_radio,          SIGNAL(clicked(bool)), this, SLOT(_set_display()));
+	connect(_idv_flooding_radio,   SIGNAL(toggled(bool)), this, SLOT(_set_display()));
+	connect(_total_flooding_radio, SIGNAL(toggled(bool)), this, SLOT(_set_display()));
+	connect(_idv_pred_radio,       SIGNAL(toggled(bool)), this, SLOT(_set_display()));
+	connect(_total_pred_radio,     SIGNAL(toggled(bool)), this, SLOT(_set_display()));
 
 	_flooding_spin_box = new QSpinBox(this);
 	_flooding_spin_box->setMinimum(0);
@@ -159,7 +170,6 @@ QGroupBox* flooding::_create_exclusive_group()
 	vbox->addWidget(_idv_pred_radio);
 	vbox->addWidget(_pred_spin_box);
 	vbox->addWidget(_total_pred_radio);
-	vbox->addStretch(1);
 	groupBox->setLayout(vbox);
 
 	return groupBox;
@@ -179,6 +189,7 @@ void flooding::_generate() const
 	get_floorplan_manager().generate(width, height, num_rect, num_point);
 	//_scene->init();
 	_scene->init_point_rect();
+	_total_dis_label->setText(QString("Total distance : 0"));
 }
 
 void flooding::_hanan_grid() const
@@ -194,18 +205,29 @@ void flooding::_flooding() const
 	_scene->init();
 }
 
-void flooding::_idv_backtracking() const
+void flooding::_backtracking() const
 {
+	_total_pred_radio->setChecked(true);
 	_scene->clear();
-	get_floorplan_manager().idv_backtracking();
+	get_floorplan_manager().backtrack();
 	_scene->init();
 }
 
-void flooding::_backtracking() const
+void flooding::_idv_complete_steiner_tree() const
 {
 	_scene->clear();
-	get_floorplan_manager().backtracking();
+	get_floorplan_manager().idv_complete_steiner_tree();
 	_scene->init();
+	_total_dis_label->setText(QString("Total distance : %1").arg(get_floorplan_manager().get_total_pred_dis()));
+}
+
+void flooding::_complete_steiner_tree() const
+{
+	_total_pred_radio->setChecked(true);
+	_scene->clear();
+	get_floorplan_manager().complete_steiner_tree();
+	_scene->init();
+	_total_dis_label->setText(QString("Total distance : %1").arg(get_floorplan_manager().get_total_pred_dis()));
 }
 
 void flooding::_set_display() const

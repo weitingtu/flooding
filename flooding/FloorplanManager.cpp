@@ -37,8 +37,6 @@ FloorplanManager::FloorplanManager():
 	_sources(),
 	_flooded(false),
 	_backtracked(false),
-	_total_pred_updated(false),
-	_idv_backtracking_idx(0),
 	_idv_backtracking_by_pred_idx(0),
 	_target_idx()
 	{}
@@ -50,7 +48,7 @@ void FloorplanManager::init()
 	_generate_grid();
 
 	flooding();
-	backtracking();
+	complete_steiner_tree();
 }
 
 void FloorplanManager::generate(int width, int height, int num_rect, int num_point)
@@ -69,8 +67,6 @@ void FloorplanManager::clear()
 {
 	_flooded = false;
 	_backtracked = false;
-	_total_pred_updated = false;
-	_idv_backtracking_idx = 0;
 	_idv_backtracking_by_pred_idx = 0;
 	_target_idx = GridPointIdx();
 	_site = QRect();
@@ -84,50 +80,64 @@ void FloorplanManager::clear()
 	_sources.clear();
 }
 
-void FloorplanManager::idv_backtracking()
+void FloorplanManager::backtrack()
 {
 	if (!_target_idx.is_valid())
 	{
 		printf("error, target idx is not valid\n");
-		return;
-	}
-
-	if(_idv_backtracking_idx < _sources.size())
-	{
-		_back_trace(_target_idx, _idv_backtracking_idx);
-		++_idv_backtracking_idx;
-	}
-	else if(!_total_pred_updated)
-	{
-		_total_pred_updated = true;
-	    _update_total_pred();
-	    _clear_pred();
-	}
-	else if(_idv_backtracking_by_pred_idx < _sources.size())
-	{
-		_back_trace_by_pred(_target_idx, _idv_backtracking_by_pred_idx);
-		++_idv_backtracking_by_pred_idx;
-	}
-}
-
-void FloorplanManager::backtracking()
-{
-	if (_idv_backtracking_by_pred_idx >= _sources.size())
-	{
 		return;
 	}
 	if (_backtracked)
 	{
 		return;
 	}
+	_backtracked = true;
+
+	for (size_t i = 0; i < _sources.size(); ++i)
+	{
+		_back_trace(_target_idx, i);
+	}
+	_update_total_pred();
+	_clear_pred();
+}
+
+void FloorplanManager::idv_complete_steiner_tree()
+{
+	if(_idv_backtracking_by_pred_idx < _sources.size())
+	{
+		_back_trace_by_pred(_target_idx, _idv_backtracking_by_pred_idx);
+		++_idv_backtracking_by_pred_idx;
+	}
+}
+
+void FloorplanManager::complete_steiner_tree()
+{
+	if (_idv_backtracking_by_pred_idx >= _sources.size())
+	{
+		return;
+	}
 	if (!_target_idx.is_valid())
 	{
 		printf("error, target idx is not valid\n");
 		return;
 	}
-	_backtracked = true;
 
 	_back_trace(_target_idx);
+}
+
+int FloorplanManager::get_total_pred_dis() const
+{
+	int total_pred_dis = 0;
+	for (size_t i = 0; i < _sources.size(); ++i)
+	{
+		const GridPoint& point = _get_grid_point(_sources.at(i));
+		if (point.total_pred_dis != std::numeric_limits<int>::max())
+		{
+		    total_pred_dis += point.total_pred_dis;
+		}
+	}
+
+	return total_pred_dis;
 }
 
 bool FloorplanManager::_is_in_site(const QRect& rect) const
@@ -490,12 +500,10 @@ void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i)
 		{
 			const GridPointIdx& pred_idx = point.predecessors.at(i).at(j);
 		    const GridPoint& pred_point  = _get_grid_point(pred_idx);
-			//if (pred < pred_point.pred.at(i))
 			if (pred < pred_point.total_pred)
 			{
-				//pred = pred_point.pred.at(i);
 				pred = pred_point.total_pred;
-				dis = abs(point.x - pred_point.x) + abs(point.y - point.y);
+				dis = abs(point.x - pred_point.x) + abs(point.y - pred_point.y);
 				idx = pred_idx;
 			}
 		}
@@ -552,12 +560,11 @@ void FloorplanManager::_update_total_pred()
 			}
 			else if (p.is_source)
 			{
-				continue;
+				p.total_pred = std::accumulate(p.pred.begin(), p.pred.end(), 0);
 			}
 			else
 			{
-				int total_pred = std::accumulate(p.pred.begin(), p.pred.end(), 0);
-				p.total_pred = total_pred;
+				p.total_pred = std::accumulate(p.pred.begin(), p.pred.end(), 0);
 			}
 		}
 	}
@@ -589,12 +596,11 @@ void FloorplanManager::_back_trace(const GridPointIdx& idx)
 	for (size_t i = 0; i < _sources.size(); ++i)
 	{
 		_back_trace(idx, i);
-		_idv_backtracking_idx = i + 1;
 	}
 
 	_update_total_pred();
 	_clear_pred();
-	_total_pred_updated = true;
+	_backtracked = true;
 	
 	for (size_t i = 0; i < _sources.size(); ++i)
 	{

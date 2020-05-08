@@ -10,6 +10,7 @@ class FloodingScene;
 class QGroupBox;
 class QRadioButton;
 class QSpinBox;
+class QLabel;
 
 class flooding : public QMainWindow
 {
@@ -22,8 +23,9 @@ private slots:
 	void _generate() const;
 	void _hanan_grid() const;
 	void _flooding() const;
-	void _idv_backtracking() const;
 	void _backtracking() const;
+	void _idv_complete_steiner_tree() const;
+	void _complete_steiner_tree() const;
 	void _set_display() const;
 
 private:
@@ -43,8 +45,10 @@ private:
 	QPushButton* _generate_button;
 	QPushButton* _hanan_grid_button;
 	QPushButton* _flooding_button;
-	QPushButton* _idv_backtracking_button;
 	QPushButton* _backtracking_button;
+	QPushButton* _idv_completed_steiner_tree_button;
+	QPushButton* _completed_steiner_tree_button;
+	QLabel*      _total_dis_label;
 	QGraphicsView* _view;
 	FloodingScene* _scene;
 	//Ui::floodingClass ui;

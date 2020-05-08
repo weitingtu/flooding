@@ -75,8 +75,9 @@ public:
 	void generate(int width, int height, int num_rect, int num_point);
 	void clear();
 	void flooding();
-	void idv_backtracking();
-	void backtracking();
+	void backtrack();
+	void idv_complete_steiner_tree();
+	void complete_steiner_tree();
 
 	const QRect& get_site() const { return _site;  }
 	const std::vector<QRect>& get_rects() const { return _rects; }
@@ -86,6 +87,7 @@ public:
 	const std::vector<std::vector<GridPoint>>& get_grids() const { return _grids; }
 	const std::vector<GridPointIdx>& get_sources() const { return _sources; }
 	bool is_flooded() const { return _flooded;  }
+	int get_total_pred_dis() const;
 
 private:
 	QRect  _generate_random_rect() const;
@@ -110,7 +112,6 @@ private:
 	int _get_y_idx(int x) const;
 
 	void _init_flooding();
-	void _flooding();
 	void _flooding(const GridPointIdx& from_idx, const GridPoint& from, const GridPointIdx& to_idx, Flooding& f);
 	void _flooding(size_t s_idx, const GridPointIdx& source);
 	GridPointIdx _find_target();
@@ -122,6 +123,8 @@ private:
 
 	GridPoint& _get_grid_point(size_t x, size_t y) { return _grids.at(x).at(y); }
 	GridPoint& _get_grid_point(const GridPointIdx& i) { return _grids.at(i.x).at(i.y); }
+	const GridPoint& _get_grid_point(size_t x, size_t y) const { return _grids.at(x).at(y); }
+	const GridPoint& _get_grid_point(const GridPointIdx& i) const { return _grids.at(i.x).at(i.y); }
 
 	QRect _site;
 	int _num_rect;
@@ -134,8 +137,6 @@ private:
 	std::vector<GridPointIdx> _sources;
 	bool _flooded;
 	bool _backtracked;
-	bool _total_pred_updated;
-	size_t _idv_backtracking_idx;
 	size_t _idv_backtracking_by_pred_idx;
 	GridPointIdx _target_idx;
 
