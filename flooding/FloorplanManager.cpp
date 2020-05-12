@@ -178,6 +178,7 @@ int FloorplanManager::get_total_pred_dis() const
 			}
 		}
 	}
+
 	for (size_t x = 0; x < _grids.size() - 1; ++x)
 	{
 		for (size_t y = 0; y < _grids.at(x).size(); ++y)
@@ -196,7 +197,6 @@ int FloorplanManager::get_total_pred_dis() const
 			}
 		}
 	}
-
 
 	return total_pred_dis;
 }
@@ -279,7 +279,7 @@ void FloorplanManager::_generate_rects()
 {
 	int count = 0;
 	int test = 0;
-	while(count < _num_rect && test < 100)
+	while(count < _num_rect && test < 1000)
 	{
 		++test;
 		QRect rect = _generate_random_rect();
@@ -294,13 +294,19 @@ void FloorplanManager::_generate_rects()
 		++count;
 		_rects.push_back(rect);
 	}
+	if (_rects.size() != _num_rect)
+	{
+		printf("warning, unable to create enough obs expected (%d), created (%zu)\n", _num_rect, _rects.size());
+		printf("please enlarge area\n");
+		_num_rect = _rects.size();
+	}
 }
 
 void FloorplanManager::_generate_points()
 {
 	int count = 0;
 	int test = 0;
-	while(count < _num_point && test < 100)
+	while(count < _num_point && test < 1000)
 	{
 		++test;
 		QPoint p = _generate_random_point();
@@ -310,6 +316,12 @@ void FloorplanManager::_generate_points()
 		}
 		++count;
 		_points.push_back(p);
+	}
+	if (_points.size() != _num_point)
+	{
+		printf("warning, unable to create enough terminal expected (%d), created (%zu)\n", _num_point, _points.size());
+		printf("please enlarge area\n");
+		_num_point = _points.size();
 	}
 }
 

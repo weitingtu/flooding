@@ -42,6 +42,9 @@ flooding::flooding(QWidget *parent)
 	get_floorplan_manager().init();
 	_total_dis_label->setText(QString("Total distance : %1").arg(get_floorplan_manager().get_total_pred_dis()));
 
+    DisplayManager& dm = get_display_manager();
+	dm.set_source_termianl_only(true);
+
 	_view = new FloodingView(this);
 	_scene = new FloodingScene(this);
 	_scene->init();
@@ -177,6 +180,9 @@ QGroupBox* flooding::_create_exclusive_group()
 
 void flooding::_generate() const
 {
+    DisplayManager& dm = get_display_manager();
+	dm.set_source_termianl_only(false);
+
 	int width  = _width_line_edit->text().toInt();
 	int height = _height_line_edit->text().toInt();
 	int num_rect  = _num_rect_line_edit->text().toInt();
@@ -216,6 +222,9 @@ void flooding::_backtracking() const
 
 void flooding::_idv_complete_steiner_tree() const
 {
+    DisplayManager& dm = get_display_manager();
+	dm.set_source_termianl_only(true);
+
 	_scene->clear();
 	get_floorplan_manager().idv_complete_steiner_tree();
 	_scene->init();
@@ -224,6 +233,9 @@ void flooding::_idv_complete_steiner_tree() const
 
 void flooding::_complete_steiner_tree() const
 {
+    DisplayManager& dm = get_display_manager();
+	dm.set_source_termianl_only(true);
+
 	_total_pred_radio->setChecked(true);
 	_scene->clear();
 	get_floorplan_manager().complete_steiner_tree();

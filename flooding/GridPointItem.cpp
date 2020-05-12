@@ -5,9 +5,14 @@
 
 void GridPointItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget )
 {
-	painter->save();
+    const DisplayManager& dm = get_display_manager();
 	const FloorplanManager& m = get_floorplan_manager();
 	const GridPoint& p = m.get_grids().at(_x_idx).at(_y_idx);
+	if (dm.is_source_target_only() && (!p.is_source && !p.is_target))
+	{
+		return;
+	}
+	painter->save();
 	QPen pen;
 	QBrush brush;
 	if (!p.is_valid)
@@ -38,7 +43,6 @@ void GridPointItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* opt
 
 	painter->restore();
 
-    const DisplayManager& dm = get_display_manager();
 	std::string text;
 	if (dm.is_indivisual_flooding())
 	{
