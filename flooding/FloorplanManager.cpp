@@ -3,6 +3,7 @@
 #include <queue>
 #include <numeric>
 #include <set>
+#include <algorithm>
 
 Flooding::Flooding(const std::vector<std::vector<GridPoint>>& grids):
 	queue(),
@@ -258,11 +259,13 @@ bool FloorplanManager::_is_overlap(const QPoint& p) const
 
 QRect FloorplanManager::_generate_random_rect() const
 {
+	int max_w = std::min(_get_site_width()  * 0.3, (double)_get_site_width()  / _num_rect * 10);
+	int max_h = std::min(_get_site_height() * 0.3, (double)_get_site_height() / _num_rect * 10);
 	int x = rand() % _get_site_width() * 0.9;
 	int y = rand() % _get_site_height() * 0.9;
 
-	int w = rand() % _get_site_width() * 0.3 + _get_site_width() * 0.05;
-	int h = rand() % _get_site_height() * 0.3 + _get_site_height() * 0.05;
+	int w = rand() % max_w;
+	int h = rand() % max_h;
 
 	return QRect(x, y, w, h);
 }
