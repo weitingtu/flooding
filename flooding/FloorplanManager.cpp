@@ -204,19 +204,19 @@ int FloorplanManager::get_total_pred_dis() const
 
 bool FloorplanManager::_is_in_site(const QRect& rect) const
 {
-	if (rect.left() < _site.left())
+	if (rect.left() <= _site.left())
 	{
 		return false;
 	}
-	if (rect.top() < _site.top())
+	if (rect.top() <= _site.top())
 	{
 		return false;
 	}
-	if (rect.right() > _site.right())
+	if (rect.right() >= _site.right())
 	{
 		return false;
 	}
-	if (rect.bottom() > _site.bottom())
+	if (rect.bottom() >= _site.bottom())
 	{
 		return false;
 	}
@@ -225,9 +225,12 @@ bool FloorplanManager::_is_in_site(const QRect& rect) const
 
 bool FloorplanManager::_is_overlap(const QRect& rect) const
 {
+	QRect r1 = rect.marginsAdded(QMargins(3, 3, 3, 3));
 	for (const QRect& r : _rects)
 	{
-		if (r.intersects(rect))
+	    QRect r2 = r.marginsAdded(QMargins(3, 3, 3, 3));
+		//if (r.intersects(rect))
+		if(r2.intersects(r1))
 		{
 			return true;
 		}
