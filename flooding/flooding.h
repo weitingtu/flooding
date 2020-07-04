@@ -26,6 +26,7 @@ private slots:
 	void _backtracking() const;
 	void _idv_complete_steiner_tree() const;
 	void _complete_steiner_tree() const;
+	void _path_shortening() const;
 	void _set_display() const;
 
 private:
@@ -48,6 +49,7 @@ private:
 	QPushButton* _backtracking_button;
 	QPushButton* _idv_completed_steiner_tree_button;
 	QPushButton* _completed_steiner_tree_button;
+	QPushButton* _path_shortening_button;
 	QLabel*      _total_dis_label;
 	QGraphicsView* _view;
 	FloodingScene* _scene;

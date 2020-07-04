@@ -1,9 +1,11 @@
 #include "GridLineItem.h"
 #include "FloorplanManager.h"
+#include "DisplayManager.h"
 #include <QPainter>
 
 void GridLineItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget )
 {
+    const DisplayManager& dm = get_display_manager();
 	painter->save();
 	const FloorplanManager& m = get_floorplan_manager();
 
@@ -29,7 +31,17 @@ void GridLineItem::paint(QPainter* painter, const QStyleOptionGraphicsItem* opti
 		painter->setPen(pen());
 	}
 
-	painter->drawLine(line());
+	if (!dm.is_show_grid_line())
+	{
+		if (black)
+		{
+		    painter->drawLine(line());
+		}
+	}
+	else
+	{
+		painter->drawLine(line());
+	}
 
 
 	painter->restore();

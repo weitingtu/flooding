@@ -32,6 +32,7 @@ flooding::flooding(QWidget *parent)
 	_backtracking_button(nullptr),
 	_idv_completed_steiner_tree_button(nullptr),
 	_completed_steiner_tree_button(nullptr),
+	_path_shortening_button(nullptr),
 	_total_dis_label(nullptr),
 	_view(nullptr),
 	_scene(nullptr)
@@ -123,6 +124,11 @@ void flooding::_create_dock_widget()
 	connect(_completed_steiner_tree_button, SIGNAL(released()), this, SLOT(_complete_steiner_tree()));
 	++idx;
 
+	_path_shortening_button = new QPushButton("Path shortening");
+	layout->addWidget(_path_shortening_button, idx, 0, 1, 2);
+	connect(_path_shortening_button, SIGNAL(released()), this, SLOT(_path_shortening()));
+	++idx;
+
 	_total_dis_label = new QLabel("Total distance : 0");
 	layout->addWidget(_total_dis_label, idx, 0, 1, 2);
 	++idx;
@@ -182,6 +188,7 @@ void flooding::_generate() const
 {
     DisplayManager& dm = get_display_manager();
 	dm.set_source_termianl_only(false);
+	dm.set_show_grid_line(true);
 
 	int width  = _width_line_edit->text().toInt();
 	int height = _height_line_edit->text().toInt();
@@ -239,6 +246,19 @@ void flooding::_complete_steiner_tree() const
 	_total_pred_radio->setChecked(true);
 	_scene->clear();
 	get_floorplan_manager().complete_steiner_tree();
+	_scene->init();
+	_total_dis_label->setText(QString("Total distance : %1").arg(get_floorplan_manager().get_total_pred_dis()));
+}
+
+void flooding::_path_shortening() const
+{
+    DisplayManager& dm = get_display_manager();
+	dm.set_source_termianl_only(true);
+	dm.set_show_grid_line(false);
+
+	_total_pred_radio->setChecked(true);
+	_scene->clear();
+	get_floorplan_manager().path_shortening();
 	_scene->init();
 	_total_dis_label->setText(QString("Total distance : %1").arg(get_floorplan_manager().get_total_pred_dis()));
 }

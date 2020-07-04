@@ -78,6 +78,7 @@ public:
 	void backtrack();
 	void idv_complete_steiner_tree();
 	void complete_steiner_tree();
+	void path_shortening();
 
 	const QRect& get_site() const { return _site;  }
 	const std::vector<QRect>& get_rects() const { return _rects; }
@@ -121,6 +122,11 @@ private:
 	void _update_total_pred();
 	void _clear_pred();
 
+	bool _has_edge(const GridPointIdx& idx1, const GridPoint& p1, int x, int y) const;
+	size_t _get_out_edge_num(const GridPointIdx& idx) const;
+	GridPointIdx _get_nearest_source(size_t i) const;
+	void _clear_pred(size_t i);
+
 	GridPoint& _get_grid_point(size_t x, size_t y) { return _grids.at(x).at(y); }
 	GridPoint& _get_grid_point(const GridPointIdx& i) { return _grids.at(i.x).at(i.y); }
 	const GridPoint& _get_grid_point(size_t x, size_t y) const { return _grids.at(x).at(y); }
@@ -152,6 +158,7 @@ private:
 	std::vector<IdxTotalPred>   _sources_to_complete;
 	bool _flooded;
 	bool _backtracked;
+	bool _path_shorteded;
 	size_t _idv_backtracking_by_pred_idx;
 	GridPointIdx _target_idx;
 

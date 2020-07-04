@@ -3,6 +3,7 @@
 #include <queue>
 #include <numeric>
 #include <set>
+#include <map>
 #include <algorithm>
 
 Flooding::Flooding(const std::vector<std::vector<GridPoint>>& grids):
@@ -39,6 +40,7 @@ FloorplanManager::FloorplanManager():
 	_sources_to_complete(),
 	_flooded(false),
 	_backtracked(false),
+	_path_shorteded(false),
 	_idv_backtracking_by_pred_idx(0),
 	_target_idx()
 	{}
@@ -69,6 +71,7 @@ void FloorplanManager::clear()
 {
 	_flooded = false;
 	_backtracked = false;
+	_path_shorteded = false;
 	_idv_backtracking_by_pred_idx = 0;
 	_target_idx = GridPointIdx();
 	_site = QRect();
@@ -150,16 +153,6 @@ void FloorplanManager::complete_steiner_tree()
 
 int FloorplanManager::get_total_pred_dis() const
 {
-	//int total_pred_dis = 0;
-	//for (size_t i = 0; i < _sources.size(); ++i)
-	//{
-	//	const GridPoint& point = _get_grid_point(_sources.at(i));
-	//	if (point.total_pred_dis != std::numeric_limits<int>::max())
-	//	{
-	//	    total_pred_dis += point.total_pred_dis;
-	//	}
-	//}
-
 	int total_pred_dis = 0;
 	for (size_t x = 0; x < _grids.size(); ++x)
 	{
@@ -427,7 +420,7 @@ int FloorplanManager::_get_x_idx(int x) const
     std::vector<int>::const_iterator ite = std::find(_x.begin(), _x.end(), x);
 	if (ite == _x.end())
 	{
-		printf("error, cannot finx %d in x coordinates\n", x);
+		printf("error, cannot find %d in x coordinates\n", x);
 		return -1;
 	}
     return std::distance(_x.begin(), ite);
@@ -438,7 +431,7 @@ int FloorplanManager::_get_y_idx(int y) const
     std::vector<int>::const_iterator ite = std::find(_y.begin(), _y.end(), y);
 	if (ite == _y.end())
 	{
-		printf("error, cannot finx %d in y coordinates\n", y);
+		printf("error, cannot find %d in y coordinates\n", y);
 		return -1;
 	}
     return std::distance(_y.begin(), ite);
@@ -773,6 +766,169 @@ void FloorplanManager::_flooding(size_t s_idx, const GridPointIdx& source)
 			GridPoint& point = _get_grid_point(x, y);
 			point.distance.at(s_idx) = f.get_distance(x, y);
 			point.predecessors.at(s_idx) = f.get_predecessors(x, y);
+		}
+	}
+}
+
+bool FloorplanManager::_has_edge(const GridPointIdx& idx1, const GridPoint& p1, int x, int y) const
+{
+	if (x < 0)
+	{
+		return false;
+	}
+	if (x >= _grids.size())
+	{
+		return false;
+	}
+	if (y < 0)
+	{
+		return false;
+	}
+	if (y >= _grids.at(x).size())
+	{
+		return false;
+	}
+
+	GridPointIdx idx2(x, y);
+	const GridPoint& p2 = _get_grid_point(idx2);
+
+	for (size_t i = 0; i < p1.predecessor.size(); ++i)
+	{
+		if (p1.predecessor.at(i) == idx2 || p2.predecessor.at(i) == idx1)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+size_t FloorplanManager::_get_out_edge_num(const GridPointIdx& idx ) const
+{
+	const GridPoint& p = _get_grid_point(idx);
+	size_t count = 0;
+	if (_has_edge(idx, p, idx.x - 1, idx.y))
+	{
+		++count;
+	}
+	if (_has_edge(idx, p, idx.x + 1, idx.y))
+	{
+		++count;
+	}
+	if (_has_edge(idx, p, idx.x, idx.y - 1))
+	{
+		++count;
+	}
+	if (_has_edge(idx, p, idx.x, idx.y + 1))
+	{
+		++count;
+	}
+
+	return count;
+}
+
+GridPointIdx FloorplanManager::_get_nearest_source(size_t i) const
+{
+	int min_dis = std::numeric_limits<int>::max();
+	GridPointIdx min_idx = GridPointIdx();
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			const GridPoint& point = _get_grid_point(x, y);
+			if (!point.is_source)
+			{
+				continue;
+			}
+			if (point.distance.at(i) <= 0)
+			{
+				continue;
+			}
+			if (point.distance.at(i) < min_dis)
+			{
+				min_dis = point.distance.at(i);
+				min_idx = GridPointIdx(x, y);
+			}
+		}
+	}
+
+	return min_idx;
+}
+
+void FloorplanManager::_clear_pred(size_t i)
+{
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			GridPoint& p = _get_grid_point(x, y);
+			p.predecessor.at(i) = GridPointIdx();
+		}
+	}
+}
+
+void FloorplanManager::path_shortening()
+{
+	if (!_backtracked)
+	{
+		return;
+	}
+	if (_path_shorteded)
+	{
+		return;
+	}
+	_path_shorteded = true;
+
+	std::map<GridPointIdx, size_t> source_map;
+	std::set<size_t> single_end_sources;
+	for (size_t i = 0; i < _sources.size(); ++i)
+	{
+		const GridPointIdx& idx = _sources.at(i);
+		source_map.insert(std::make_pair(idx, i));
+
+		size_t count = _get_out_edge_num(idx);
+		if(1 == count)
+		{
+			single_end_sources.insert(i);
+		}
+	}
+	int orig_dist = get_total_pred_dis();
+
+	while(!single_end_sources.empty())
+	{
+		size_t i = *(single_end_sources.begin());
+		single_end_sources.erase(i);
+
+		GridPointIdx nearest_idx = _get_nearest_source(i);
+		if (!nearest_idx.is_valid())
+		{
+			continue;
+		}
+		int prev_dist = get_total_pred_dis();
+	    _clear_pred(i);
+		_back_trace_by_pred(nearest_idx, i);
+		int new_dist = get_total_pred_dis();
+		if (new_dist >= prev_dist)
+		{
+			// no better, recover
+	        _clear_pred(i);
+		    _back_trace_by_pred(_target_idx, i);
+			continue;
+		}
+
+		auto source_map_ite = source_map.find(nearest_idx);
+		if (source_map_ite != source_map.end())
+		{
+			size_t nearest_i = source_map_ite->second;
+			auto ite = single_end_sources.find(nearest_i);
+			if (ite != single_end_sources.end())
+			{
+				single_end_sources.erase(ite);
+			}
+		}
+		else
+		{
+			printf("%s, %d error, cannot find %d,%d in source map\n", __func__, __LINE__, nearest_idx.x, nearest_idx.y);
+			continue;
 		}
 	}
 }
