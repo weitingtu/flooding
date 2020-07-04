@@ -30,9 +30,11 @@ void FloodingScene::add_rect()
 {
 	const FloorplanManager& m = get_floorplan_manager();
 	QPen pen(Qt::cyan);
+	pen.setWidth(0);
 	QBrush brush(Qt::cyan);
-	for (const QRect& rect : m.get_rects())
+	for (QRect rect : m.get_rects())
 	{
+		rect = rect.marginsRemoved(QMargins(0, 0, 1, 1));
 		addRect(rect, pen, brush);
 	}
 }
@@ -104,7 +106,6 @@ void FloodingScene::add_grid_seg()
 			GridLineItem* item = new GridLineItem(p1.idx, p2.idx, QLineF(p1.p, p2.p));
 			item->setPen(pen);
 			addItem(item);
-		    //addLine(QLineF(p1.p, p2.p), pen);
 		}
 	}
 	for (size_t x = 0; x < m.get_grids().size(); ++x)
@@ -124,7 +125,6 @@ void FloodingScene::add_grid_seg()
 			GridLineItem* item = new GridLineItem(p1.idx, p2.idx, QLineF(p1.p, p2.p));
 			item->setPen(pen);
 			addItem(item);
-		    //addLine(QLineF(p1.p, p2.p), pen);
 		}
 	}
 }
