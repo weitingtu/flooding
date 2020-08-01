@@ -195,6 +195,42 @@ int FloorplanManager::get_total_pred_dis() const
 	return total_pred_dis;
 }
 
+bool FloorplanManager::_has_edge(size_t x1, size_t y1, size_t x2, size_t y2) const
+{
+	GridPointIdx idx1(x1, y1);
+	GridPointIdx idx2(x2, y2);
+	const GridPoint& p1 = get_grids().at(idx1.x).at(idx1.y);
+	const GridPoint& p2 = get_grids().at(idx2.x).at(idx2.y);
+	for (size_t i = 0; i < p1.predecessor.size(); ++i)
+	{
+	    if (p1.predecessor.at(i) == idx2 || p2.predecessor.at(i) == idx1)
+	    {
+	        return true;
+	    }
+	}
+	return false;
+}
+
+bool FloorplanManager::_check_intersection() const
+{
+	int total_pred_dis = 0;
+	for (size_t x = 1; x < _grids.size() - 1; ++x)
+	{
+		for (size_t y = 1; y < _grids.at(x).size() - 1; ++y)
+		{
+			if (_has_edge(x, y, x, y - 1)
+				&& _has_edge(x, y, x, y + 1)
+				&& _has_edge(x, y, x - 1, y)
+				&& _has_edge(x, y, x + 1, y)
+				)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 bool FloorplanManager::_is_in_site(const QRect& rect) const
 {
 	if (rect.left() <= _site.left())
@@ -906,6 +942,13 @@ void FloorplanManager::path_shortening()
 		int prev_dist = get_total_pred_dis();
 	    _clear_pred(i);
 		_back_trace_by_pred(nearest_idx, i);
+		if (_check_intersection())
+		{
+			// has intersection, recover
+	        _clear_pred(i);
+		    _back_trace_by_pred(_target_idx, i);
+			continue;
+        }
 		int new_dist = get_total_pred_dis();
 		if (new_dist >= prev_dist)
 		{
