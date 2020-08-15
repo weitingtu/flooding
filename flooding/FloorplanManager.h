@@ -118,7 +118,7 @@ private:
 	GridPointIdx _find_target();
 	bool _is_selected(GridPointIdx idx, const GridPoint& point, GridPointIdx to_idx) const;
 	bool _is_selected(GridPointIdx idx, const GridPoint& point) const;
-	void _back_trace_by_pred(GridPointIdx idx, size_t i);
+	void _back_trace_by_pred(GridPointIdx idx, size_t i, bool check_selected);
 	void _back_trace(const GridPointIdx& idx, size_t i);
 	void _back_trace(const GridPointIdx& idx );
 	void _update_total_pred();
@@ -127,6 +127,7 @@ private:
 	bool _has_edge(const GridPointIdx& idx1, const GridPoint& p1, int x, int y) const;
 	bool _has_edge(size_t x1, size_t y1, size_t x2, size_t y2) const;
 	bool _check_intersection() const;
+	bool _check_intersection(const GridPointIdx& idx) const;
 	size_t _get_out_edge_num(const GridPointIdx& idx) const;
 	GridPointIdx _get_nearest_source(size_t i) const;
 	void _clear_pred(size_t i);

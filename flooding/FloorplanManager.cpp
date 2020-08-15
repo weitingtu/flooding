@@ -52,6 +52,7 @@ void FloorplanManager::init()
 	_generate_grid();
 
 	flooding();
+	backtrack();
 	complete_steiner_tree();
 }
 
@@ -109,7 +110,7 @@ void FloorplanManager::backtrack()
 	// update source total_pred
 	for (size_t i = 0; i < _sources.size(); ++i)
 	{
-		_back_trace_by_pred(_target_idx, i);
+		_back_trace_by_pred(_target_idx, i, false);
 	}
 	_clear_pred();
 
@@ -131,24 +132,35 @@ void FloorplanManager::idv_complete_steiner_tree()
 	if(_idv_backtracking_by_pred_idx < _sources_to_complete.size())
 	{
 		const IdxTotalPred& id = _sources_to_complete.at(_idv_backtracking_by_pred_idx);
-		_back_trace_by_pred(_target_idx, id.idx);
+		_back_trace_by_pred(_target_idx, id.idx, true);
 		++_idv_backtracking_by_pred_idx;
 	}
 }
 
 void FloorplanManager::complete_steiner_tree()
 {
-	if (_idv_backtracking_by_pred_idx >= _sources.size())
-	{
-		return;
-	}
-	if (!_target_idx.is_valid())
-	{
-		printf("error, target idx is not valid\n");
-		return;
-	}
+	//if (_idv_backtracking_by_pred_idx >= _sources.size())
+	//{
+	//	return;
+	//}
+	//if (!_target_idx.is_valid())
+	//{
+	//	printf("error, target idx is not valid\n");
+	//	return;
+	//}
 
-	_back_trace(_target_idx);
+	//_back_trace(_target_idx);
+	if (_sources_to_complete.size() != _sources.size())
+	{
+		printf("sources to complete size and sources size mismatch %zu != %zu\n", _sources_to_complete.size(), _sources.size());
+		return;
+	}
+	while(_idv_backtracking_by_pred_idx < _sources_to_complete.size())
+	{
+		const IdxTotalPred& id = _sources_to_complete.at(_idv_backtracking_by_pred_idx);
+		_back_trace_by_pred(_target_idx, id.idx, true);
+		++_idv_backtracking_by_pred_idx;
+	}
 }
 
 int FloorplanManager::get_total_pred_dis() const
@@ -199,6 +211,13 @@ bool FloorplanManager::_has_edge(size_t x1, size_t y1, size_t x2, size_t y2) con
 {
 	GridPointIdx idx1(x1, y1);
 	GridPointIdx idx2(x2, y2);
+	if (idx1.x < 0
+		|| idx1.y < 0
+		|| idx2.x < 0
+		|| idx2.y < 0)
+	{
+		return false;
+	}
 	const GridPoint& p1 = get_grids().at(idx1.x).at(idx1.y);
 	const GridPoint& p2 = get_grids().at(idx2.x).at(idx2.y);
 	for (size_t i = 0; i < p1.predecessor.size(); ++i)
@@ -213,7 +232,6 @@ bool FloorplanManager::_has_edge(size_t x1, size_t y1, size_t x2, size_t y2) con
 
 bool FloorplanManager::_check_intersection() const
 {
-	int total_pred_dis = 0;
 	for (size_t x = 1; x < _grids.size() - 1; ++x)
 	{
 		for (size_t y = 1; y < _grids.at(x).size() - 1; ++y)
@@ -227,6 +245,21 @@ bool FloorplanManager::_check_intersection() const
 				return true;
 			}
 		}
+	}
+	return false;
+}
+
+bool FloorplanManager::_check_intersection(const GridPointIdx& idx) const
+{
+	size_t x = idx.x;
+	size_t y = idx.y;
+	if (_has_edge(x, y, x, y - 1)
+		&& _has_edge(x, y, x, y + 1)
+		&& _has_edge(x, y, x - 1, y)
+		&& _has_edge(x, y, x + 1, y)
+		)
+	{
+		return true;
 	}
 	return false;
 }
@@ -635,28 +668,54 @@ bool FloorplanManager::_is_selected(GridPointIdx idx, const GridPoint& point) co
 	return false;
 }
 
-void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i)
+struct DisIdx
+{
+	DisIdx(double d, GridPointIdx i) : dis(d), idx(i) {}
+	double dis;
+	GridPointIdx idx;
+	bool operator < (const DisIdx& rhs) const
+	{
+		return std::tie(dis, idx) < std::tie(rhs.dis, rhs.idx);
+	}
+};
+
+struct IdxIdx
+{
+	GridPointIdx idx;
+	GridPointIdx pred_idx;
+};
+
+void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i, bool check_intersection)
 {
 	const GridPointIdx& source = _sources.at(i);
+	const GridPoint& source_point = _get_grid_point(source);
 
 	int total_pred = 0;
 	int total_pred_dis = 0;
+	std::vector<IdxIdx> path;
 	while (idx != source)
 	{
+		IdxIdx ii;
+		ii.idx = idx;
 		GridPoint& point = _get_grid_point(idx);
 		int pred = -1;
 		int dis = 0;
+		//std::vector<DisIdx> dis_idx;
 		for (size_t j = 0; j < point.predecessors.at(i).size(); ++j)
 		{
 			const GridPointIdx& pred_idx = point.predecessors.at(i).at(j);
 		    const GridPoint& pred_point  = _get_grid_point(pred_idx);
-			if (_is_selected(pred_idx, pred_point))
-			{
-				pred = pred_point.total_pred;
-				dis = abs(point.x - pred_point.x) + abs(point.y - pred_point.y);
-				idx = pred_idx;
-				break;
-			}
+			//if (check_selected && _is_selected(pred_idx, pred_point))
+			//{
+			//	pred = pred_point.total_pred;
+			//	dis = abs(point.x - pred_point.x) + abs(point.y - pred_point.y);
+			//	idx = pred_idx;
+			//	double x_dis = (double)(source.x - pred_point.x);
+			//	double y_dis = (double)(source.x - pred_point.y);
+			//	double dd_dis = sqrt(x_dis * x_dis + y_dis * y_dis);
+			//	dis_idx.push_back(DisIdx(dd_dis, idx));
+			//}
+			//else if (pred < pred_point.total_pred)
 			if (pred < pred_point.total_pred)
 			{
 				pred = pred_point.total_pred;
@@ -664,7 +723,18 @@ void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i)
 				idx = pred_idx;
 			}
 		}
-		point.predecessor.at(i) = idx;
+		//if (!dis_idx.empty())
+		//{
+		//    std::sort(dis_idx.begin(), dis_idx.end());
+		//	idx = dis_idx.front().idx;
+		//}
+		ii.pred_idx = idx;
+		path.push_back(ii);
+
+		if (!check_intersection)
+		{
+    		point.predecessor.at(i) = idx;
+		}
 		total_pred_dis += dis;
 		if (idx == source)
 		{
@@ -675,6 +745,19 @@ void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i)
 		else
 		{
 			total_pred += pred;
+		}
+	}
+	if (check_intersection)
+	{
+		for (size_t j = path.size(); j-- > 0;)
+		{
+			IdxIdx ii = path.at(j);
+			if (_check_intersection(ii.pred_idx))
+			{
+				break;
+			}
+			GridPoint& point = _get_grid_point(ii.idx);
+			point.predecessor.at(i) = ii.pred_idx;
 		}
 	}
 }
@@ -738,6 +821,7 @@ void FloorplanManager::_clear_pred()
 	}
 }
 
+
 void FloorplanManager::_back_trace(const GridPointIdx& idx)
 {
 	if (idx.x < 0 || idx.y < 0)
@@ -757,7 +841,7 @@ void FloorplanManager::_back_trace(const GridPointIdx& idx)
 	
 	for (size_t i = 0; i < _sources.size(); ++i)
 	{
-		_back_trace_by_pred(idx, i);
+		_back_trace_by_pred(idx, i, true);
 		_idv_backtracking_by_pred_idx = i + 1;
 	}
 }
@@ -988,12 +1072,12 @@ void FloorplanManager::path_shortening()
 		}
 		int prev_dist = get_total_pred_dis();
 	    _clear_pred(i);
-		_back_trace_by_pred(nearest_idx, i);
+		_back_trace_by_pred(nearest_idx, i, false);
 		if (_check_intersection())
 		{
 			// has intersection, recover
 	        _clear_pred(i);
-		    _back_trace_by_pred(_target_idx, i);
+		    _back_trace_by_pred(_target_idx, i, false);
 			continue;
         }
 		int new_dist = get_total_pred_dis();
@@ -1001,7 +1085,7 @@ void FloorplanManager::path_shortening()
 		{
 			// no better, recover
 	        _clear_pred(i);
-		    _back_trace_by_pred(_target_idx, i);
+		    _back_trace_by_pred(_target_idx, i, false);
 			continue;
 		}
 
