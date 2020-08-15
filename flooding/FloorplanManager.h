@@ -116,6 +116,8 @@ private:
 	void _flooding(const GridPointIdx& from_idx, const GridPoint& from, const GridPointIdx& to_idx, Flooding& f);
 	void _flooding(size_t s_idx, const GridPointIdx& source);
 	GridPointIdx _find_target();
+	bool _is_selected(GridPointIdx idx, const GridPoint& point, GridPointIdx to_idx) const;
+	bool _is_selected(GridPointIdx idx, const GridPoint& point) const;
 	void _back_trace_by_pred(GridPointIdx idx, size_t i);
 	void _back_trace(const GridPointIdx& idx, size_t i);
 	void _back_trace(const GridPointIdx& idx );

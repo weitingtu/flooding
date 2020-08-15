@@ -595,6 +595,46 @@ GridPointIdx FloorplanManager::_find_target()
 	return idx;
 }
 
+bool FloorplanManager::_is_selected(GridPointIdx idx, const GridPoint& point, GridPointIdx to_idx) const
+{
+	if (to_idx.x < 0 || to_idx.y < 0)
+	{
+		return false;
+	}
+
+	const GridPoint& to_point = _get_grid_point(to_idx);
+	for (size_t i = 0; i < to_point.predecessor.size(); ++i)
+	{
+		if (to_point.predecessor.at(i) == idx)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool FloorplanManager::_is_selected(GridPointIdx idx, const GridPoint& point) const
+{
+	if (_is_selected(idx, point, point.top))
+	{
+		return true;
+	}
+	if (_is_selected(idx, point, point.bottom))
+	{
+		return true;
+	}
+	if (_is_selected(idx, point, point.left))
+	{
+		return true;
+	}
+	if (_is_selected(idx, point, point.right))
+	{
+		return true;
+	}
+	return false;
+}
+
 void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i)
 {
 	const GridPointIdx& source = _sources.at(i);
@@ -610,6 +650,13 @@ void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i)
 		{
 			const GridPointIdx& pred_idx = point.predecessors.at(i).at(j);
 		    const GridPoint& pred_point  = _get_grid_point(pred_idx);
+			if (_is_selected(pred_idx, pred_point))
+			{
+				pred = pred_point.total_pred;
+				dis = abs(point.x - pred_point.x) + abs(point.y - pred_point.y);
+				idx = pred_idx;
+				break;
+			}
 			if (pred < pred_point.total_pred)
 			{
 				pred = pred_point.total_pred;
