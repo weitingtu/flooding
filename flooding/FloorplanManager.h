@@ -119,6 +119,7 @@ private:
 	bool _is_selected(GridPointIdx idx, const GridPoint& point, GridPointIdx to_idx) const;
 	bool _is_selected(GridPointIdx idx, const GridPoint& point) const;
 	void _back_trace_by_pred(GridPointIdx idx, size_t i, bool check_selected);
+	void _back_trace_by_pred2(GridPointIdx idx, size_t i, bool check_selected);
 	void _back_trace(const GridPointIdx& idx, size_t i);
 	void _back_trace(const GridPointIdx& idx );
 	void _update_total_pred();

@@ -232,37 +232,45 @@ bool FloorplanManager::_has_edge(size_t x1, size_t y1, size_t x2, size_t y2) con
 
 bool FloorplanManager::_check_intersection() const
 {
+	//int total_count = 0;
 	for (size_t x = 1; x < _grids.size() - 1; ++x)
 	{
 		for (size_t y = 1; y < _grids.at(x).size() - 1; ++y)
 		{
-			int count = 0;
-			if (_has_edge(x, y, x, y - 1))
-			{
-				++count;
-			}
-			if (_has_edge(x, y, x, y + 1))
-			{
-				++count;
-			}
-			if (_has_edge(x, y, x - 1, y))
-			{
-				++count;
-			}
-			if (_has_edge(x, y, x + 1, y))
-			{
-				++count;
-			}
-			//if (_has_edge(x, y, x, y - 1)
-			//	&& _has_edge(x, y, x, y + 1)
-			//	&& _has_edge(x, y, x - 1, y)
-			//	&& _has_edge(x, y, x + 1, y)
-			//	)
-			if(count >= 3)
+			if (_has_edge(x, y, x, y - 1)
+				&& _has_edge(x, y, x, y + 1)
+				&& _has_edge(x, y, x - 1, y)
+				&& _has_edge(x, y, x + 1, y)
+				)
 			{
 				return true;
 			}
+			//int count = 0;
+			//if (_has_edge(x, y, x, y - 1))
+			//{
+			//	++count;
+			//}
+			//if (_has_edge(x, y, x, y + 1))
+			//{
+			//	++count;
+			//}
+			//if (_has_edge(x, y, x - 1, y))
+			//{
+			//	++count;
+			//}
+			//if (_has_edge(x, y, x + 1, y))
+			//{
+			//	++count;
+			//}
+			//if(count >= 3)
+			//{
+			//	++total_count;
+			//}
 		}
+		//if (total_count >= 2)
+		//{
+		//	return true;
+		//}
 	}
 	return false;
 }
@@ -279,6 +287,27 @@ bool FloorplanManager::_check_intersection(const GridPointIdx& idx) const
 	{
 		return true;
 	}
+	//int count = 0;
+	//if (_has_edge(x, y, x, y - 1))
+	//{
+	//	++count;
+	//}
+	//if (_has_edge(x, y, x, y + 1))
+	//{
+	//	++count;
+	//}
+	//if (_has_edge(x, y, x - 1, y))
+	//{
+	//	++count;
+	//}
+	//if (_has_edge(x, y, x + 1, y))
+	//{
+	//	++count;
+	//}
+	//if (count >= 3)
+	//{
+	//	return true;
+	//}
 	return false;
 }
 
@@ -718,17 +747,17 @@ void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i, bool chec
 		GridPoint& point = _get_grid_point(idx);
 		int pred = -1;
 		int dis = 0;
-		//std::vector<DisIdx> dis_idx;
+		std::vector<DisIdx> dis_idx;
 		for (size_t j = 0; j < point.predecessors.at(i).size(); ++j)
 		{
 			const GridPointIdx& pred_idx = point.predecessors.at(i).at(j);
 		    const GridPoint& pred_point  = _get_grid_point(pred_idx);
-			//if (check_selected && _is_selected(pred_idx, pred_point))
+			//if (check_intersection&& _is_selected(pred_idx, pred_point))
 			//{
 			//	pred = pred_point.total_pred;
 			//	dis = abs(point.x - pred_point.x) + abs(point.y - pred_point.y);
 			//	idx = pred_idx;
-			//	double x_dis = (double)(source.x - pred_point.x);
+		 //   	double x_dis = (double)(source.x - pred_point.x);
 			//	double y_dis = (double)(source.x - pred_point.y);
 			//	double dd_dis = sqrt(x_dis * x_dis + y_dis * y_dis);
 			//	dis_idx.push_back(DisIdx(dd_dis, idx));
@@ -746,6 +775,83 @@ void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i, bool chec
 		//    std::sort(dis_idx.begin(), dis_idx.end());
 		//	idx = dis_idx.front().idx;
 		//}
+		ii.pred_idx = idx;
+		path.push_back(ii);
+
+		if (!check_intersection)
+		{
+    		point.predecessor.at(i) = idx;
+		}
+		total_pred_dis += dis;
+		if (idx == source)
+		{
+			_get_grid_point(idx).total_pred     = total_pred;
+			_get_grid_point(idx).total_pred_dis = total_pred_dis;
+			break;
+		}
+		else
+		{
+			total_pred += pred;
+		}
+	}
+	if (check_intersection)
+	{
+		for (size_t j = path.size(); j-- > 0;)
+		{
+			IdxIdx ii = path.at(j);
+			if (_check_intersection(ii.pred_idx))
+			{
+				break;
+			}
+			GridPoint& point = _get_grid_point(ii.idx);
+			point.predecessor.at(i) = ii.pred_idx;
+		}
+	}
+}
+
+void FloorplanManager::_back_trace_by_pred2(GridPointIdx idx, size_t i, bool check_intersection)
+{
+	const GridPointIdx& source = _sources.at(i);
+	const GridPoint& source_point = _get_grid_point(source);
+
+	int total_pred = 0;
+	int total_pred_dis = 0;
+	std::vector<IdxIdx> path;
+	while (idx != source)
+	{
+		IdxIdx ii;
+		ii.idx = idx;
+		GridPoint& point = _get_grid_point(idx);
+		int pred = -1;
+		int dis = 0;
+		std::vector<DisIdx> dis_idx;
+		for (size_t j = 0; j < point.predecessors.at(i).size(); ++j)
+		{
+			const GridPointIdx& pred_idx = point.predecessors.at(i).at(j);
+		    const GridPoint& pred_point  = _get_grid_point(pred_idx);
+			if (check_intersection&& _is_selected(pred_idx, pred_point))
+			{
+				pred = pred_point.total_pred;
+				dis = abs(point.x - pred_point.x) + abs(point.y - pred_point.y);
+				idx = pred_idx;
+		    	double x_dis = (double)(source.x - pred_point.x);
+				double y_dis = (double)(source.x - pred_point.y);
+				double dd_dis = sqrt(x_dis * x_dis + y_dis * y_dis);
+				dis_idx.push_back(DisIdx(dd_dis, idx));
+			}
+			else if (pred < pred_point.total_pred)
+			//if (pred < pred_point.total_pred)
+			{
+				pred = pred_point.total_pred;
+				dis = abs(point.x - pred_point.x) + abs(point.y - pred_point.y);
+				idx = pred_idx;
+			}
+		}
+		if (!dis_idx.empty())
+		{
+		    std::sort(dis_idx.begin(), dis_idx.end());
+			idx = dis_idx.front().idx;
+		}
 		ii.pred_idx = idx;
 		path.push_back(ii);
 
@@ -1118,7 +1224,8 @@ void FloorplanManager::path_shortening()
 		int prev_dist = get_total_pred_dis();
 		std::vector<std::vector<GridPointIdx>> saved_pred = _save_pred(i);
 	    _clear_pred(i);
-		_back_trace_by_pred(nearest_idx, i, false);
+		//_back_trace_by_pred(nearest_idx, i, true);
+		_back_trace_by_pred2(nearest_idx, i, true);
 		if (_check_intersection())
 		{
 			// has intersection, recover
