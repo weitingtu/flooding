@@ -809,11 +809,12 @@ void FloorplanManager::_back_trace_by_pred(GridPointIdx idx, size_t i, bool chec
 	}
 }
 
-void FloorplanManager::_back_trace_by_pred2(GridPointIdx idx, size_t i, bool check_intersection)
+bool FloorplanManager::_back_trace_by_pred2(GridPointIdx idx, size_t i, bool check_intersection)
 {
 	const GridPointIdx& source = _sources.at(i);
 	const GridPoint& source_point = _get_grid_point(source);
 
+	bool use_selected = false;
 	int total_pred = 0;
 	int total_pred_dis = 0;
 	std::vector<IdxIdx> path;
@@ -849,8 +850,13 @@ void FloorplanManager::_back_trace_by_pred2(GridPointIdx idx, size_t i, bool che
 		}
 		if (!dis_idx.empty())
 		{
+			use_selected = true;
 		    std::sort(dis_idx.begin(), dis_idx.end());
 			idx = dis_idx.front().idx;
+		}
+		if (use_selected && dis_idx.empty())
+		{
+			return false;
 		}
 		ii.pred_idx = idx;
 		path.push_back(ii);
@@ -884,6 +890,7 @@ void FloorplanManager::_back_trace_by_pred2(GridPointIdx idx, size_t i, bool che
 			point.predecessor.at(i) = ii.pred_idx;
 		}
 	}
+	return true;
 }
 
 void FloorplanManager::_back_trace(const GridPointIdx& idx, size_t i)
@@ -1211,12 +1218,18 @@ void FloorplanManager::path_shortening()
 	}
 	int orig_dist = get_total_pred_dis();
 
+	std::set<GridPointIdx> ignore_set;
 	while(!single_end_sources.empty())
 	{
 		size_t i = *(single_end_sources.begin());
 		single_end_sources.erase(i);
+		//ignore_set.insert(_sources.at(i));
 
 		GridPointIdx nearest_idx = _get_nearest_source(i);
+		if (ignore_set.find(nearest_idx) != ignore_set.end())
+		{
+			continue;
+		}
 		if (!nearest_idx.is_valid())
 		{
 			continue;
@@ -1225,7 +1238,14 @@ void FloorplanManager::path_shortening()
 		std::vector<std::vector<GridPointIdx>> saved_pred = _save_pred(i);
 	    _clear_pred(i);
 		//_back_trace_by_pred(nearest_idx, i, true);
-		_back_trace_by_pred2(nearest_idx, i, true);
+		if (!_back_trace_by_pred2(nearest_idx, i, true))
+		{
+			// cannot find path, recover
+	        _clear_pred(i);
+			_restore_pred(i, saved_pred);
+		    //_back_trace_by_pred(_target_idx, i, true);
+			continue;
+		}
 		if (_check_intersection())
 		{
 			// has intersection, recover
@@ -1243,6 +1263,7 @@ void FloorplanManager::path_shortening()
 		    //_back_trace_by_pred(_target_idx, i, true);
 			continue;
 		}
+		ignore_set.insert(nearest_idx);
 
 		auto source_map_ite = source_map.find(nearest_idx);
 		if (source_map_ite != source_map.end())
