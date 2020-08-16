@@ -236,11 +236,29 @@ bool FloorplanManager::_check_intersection() const
 	{
 		for (size_t y = 1; y < _grids.at(x).size() - 1; ++y)
 		{
-			if (_has_edge(x, y, x, y - 1)
-				&& _has_edge(x, y, x, y + 1)
-				&& _has_edge(x, y, x - 1, y)
-				&& _has_edge(x, y, x + 1, y)
-				)
+			int count = 0;
+			if (_has_edge(x, y, x, y - 1))
+			{
+				++count;
+			}
+			if (_has_edge(x, y, x, y + 1))
+			{
+				++count;
+			}
+			if (_has_edge(x, y, x - 1, y))
+			{
+				++count;
+			}
+			if (_has_edge(x, y, x + 1, y))
+			{
+				++count;
+			}
+			//if (_has_edge(x, y, x, y - 1)
+			//	&& _has_edge(x, y, x, y + 1)
+			//	&& _has_edge(x, y, x - 1, y)
+			//	&& _has_edge(x, y, x + 1, y)
+			//	)
+			if(count >= 3)
 			{
 				return true;
 			}
@@ -1033,6 +1051,33 @@ void FloorplanManager::_clear_pred(size_t i)
 	}
 }
 
+std::vector<std::vector<GridPointIdx>> FloorplanManager::_save_pred(size_t i) const
+{
+	std::vector<std::vector<GridPointIdx>> saved_pred_idx(_grids.size());
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		saved_pred_idx.at(x).resize(_grids.at(x).size());
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			const GridPoint& p = _get_grid_point(x, y);
+			saved_pred_idx.at(x).at(y) = p.predecessor.at(i);
+		}
+	}
+	return saved_pred_idx;
+}
+
+void FloorplanManager::_restore_pred(size_t i, const std::vector<std::vector<GridPointIdx>>& saved_pred_idx)
+{
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			GridPoint& p = _get_grid_point(x, y);
+			p.predecessor.at(i) = saved_pred_idx.at(x).at(y);
+		}
+	}
+}
+
 void FloorplanManager::path_shortening()
 {
 	if (!_backtracked)
@@ -1071,13 +1116,15 @@ void FloorplanManager::path_shortening()
 			continue;
 		}
 		int prev_dist = get_total_pred_dis();
+		std::vector<std::vector<GridPointIdx>> saved_pred = _save_pred(i);
 	    _clear_pred(i);
 		_back_trace_by_pred(nearest_idx, i, false);
 		if (_check_intersection())
 		{
 			// has intersection, recover
 	        _clear_pred(i);
-		    _back_trace_by_pred(_target_idx, i, false);
+			_restore_pred(i, saved_pred);
+		    //_back_trace_by_pred(_target_idx, i, true);
 			continue;
         }
 		int new_dist = get_total_pred_dis();
@@ -1085,7 +1132,8 @@ void FloorplanManager::path_shortening()
 		{
 			// no better, recover
 	        _clear_pred(i);
-		    _back_trace_by_pred(_target_idx, i, false);
+			_restore_pred(i, saved_pred);
+		    //_back_trace_by_pred(_target_idx, i, true);
 			continue;
 		}
 

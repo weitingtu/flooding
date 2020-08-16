@@ -131,6 +131,8 @@ private:
 	size_t _get_out_edge_num(const GridPointIdx& idx) const;
 	GridPointIdx _get_nearest_source(size_t i) const;
 	void _clear_pred(size_t i);
+	std::vector<std::vector<GridPointIdx>> _save_pred(size_t i) const;
+	void _restore_pred(size_t i, const std::vector<std::vector<GridPointIdx>>& saved_pred_idx);
 
 	GridPoint& _get_grid_point(size_t x, size_t y) { return _grids.at(x).at(y); }
 	GridPoint& _get_grid_point(const GridPointIdx& i) { return _grids.at(i.x).at(i.y); }
