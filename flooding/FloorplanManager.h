@@ -131,6 +131,7 @@ private:
 	bool _check_intersection(const GridPointIdx& idx) const;
 	size_t _get_out_edge_num(const GridPointIdx& idx) const;
 	GridPointIdx _get_nearest_source(size_t i) const;
+	std::vector<std::pair<int, GridPointIdx> > _get_source_dist(size_t i) const;
 	void _clear_pred(size_t i);
 	std::vector<std::vector<GridPointIdx>> _save_pred(size_t i) const;
 	void _restore_pred(size_t i, const std::vector<std::vector<GridPointIdx>>& saved_pred_idx);

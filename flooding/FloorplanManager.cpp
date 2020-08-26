@@ -1152,6 +1152,31 @@ GridPointIdx FloorplanManager::_get_nearest_source(size_t i) const
 	return min_idx;
 }
 
+std::vector<std::pair<int, GridPointIdx> > FloorplanManager::_get_source_dist(size_t i) const
+{
+	std::vector<std::pair<int, GridPointIdx> > result;
+	for (size_t x = 0; x < _grids.size(); ++x)
+	{
+		for (size_t y = 0; y < _grids.at(x).size(); ++y)
+		{
+			const GridPoint& point = _get_grid_point(x, y);
+			if (!point.is_source)
+			{
+				continue;
+			}
+			if (point.distance.at(i) <= 0)
+			{
+				continue;
+			}
+			result.push_back(std::make_pair(point.distance.at(i), GridPointIdx(x, y)));
+		}
+	}
+
+	std::sort(result.begin(), result.end());
+
+	return result;
+}
+
 void FloorplanManager::_clear_pred(size_t i)
 {
 	for (size_t x = 0; x < _grids.size(); ++x)
@@ -1225,60 +1250,67 @@ void FloorplanManager::path_shortening()
 		single_end_sources.erase(i);
 		//ignore_set.insert(_sources.at(i));
 
-		GridPointIdx nearest_idx = _get_nearest_source(i);
-		if (ignore_set.find(nearest_idx) != ignore_set.end())
+		std::vector<std::pair<int, GridPointIdx> > result = _get_source_dist(i);
+		for (const auto& k : result)
 		{
-			continue;
-		}
-		if (!nearest_idx.is_valid())
-		{
-			continue;
-		}
-		int prev_dist = get_total_pred_dis();
-		std::vector<std::vector<GridPointIdx>> saved_pred = _save_pred(i);
-	    _clear_pred(i);
-		//_back_trace_by_pred(nearest_idx, i, true);
-		if (!_back_trace_by_pred2(nearest_idx, i, true))
-		{
-			// cannot find path, recover
-	        _clear_pred(i);
-			_restore_pred(i, saved_pred);
-		    //_back_trace_by_pred(_target_idx, i, true);
-			continue;
-		}
-		if (_check_intersection())
-		{
-			// has intersection, recover
-	        _clear_pred(i);
-			_restore_pred(i, saved_pred);
-		    //_back_trace_by_pred(_target_idx, i, true);
-			continue;
-        }
-		int new_dist = get_total_pred_dis();
-		if (new_dist >= prev_dist)
-		{
-			// no better, recover
-	        _clear_pred(i);
-			_restore_pred(i, saved_pred);
-		    //_back_trace_by_pred(_target_idx, i, true);
-			continue;
-		}
-		ignore_set.insert(nearest_idx);
-
-		auto source_map_ite = source_map.find(nearest_idx);
-		if (source_map_ite != source_map.end())
-		{
-			size_t nearest_i = source_map_ite->second;
-			auto ite = single_end_sources.find(nearest_i);
-			if (ite != single_end_sources.end())
+			//GridPointIdx nearest_idx = _get_nearest_source(i);
+			GridPointIdx nearest_idx = k.second;
+			if (ignore_set.find(nearest_idx) != ignore_set.end())
 			{
-				single_end_sources.erase(ite);
+				continue;
 			}
-		}
-		else
-		{
-			printf("%s, %d error, cannot find %d,%d in source map\n", __func__, __LINE__, nearest_idx.x, nearest_idx.y);
-			continue;
+			if (!nearest_idx.is_valid())
+			{
+				continue;
+			}
+			int prev_dist = get_total_pred_dis();
+			std::vector<std::vector<GridPointIdx>> saved_pred = _save_pred(i);
+			_clear_pred(i);
+			//_back_trace_by_pred(nearest_idx, i, true);
+			if (!_back_trace_by_pred2(nearest_idx, i, true))
+			{
+				// cannot find path, recover
+				_clear_pred(i);
+				_restore_pred(i, saved_pred);
+				//_back_trace_by_pred(_target_idx, i, true);
+				continue;
+			}
+			if (_check_intersection())
+			{
+				// has intersection, recover
+				_clear_pred(i);
+				_restore_pred(i, saved_pred);
+				//_back_trace_by_pred(_target_idx, i, true);
+				continue;
+			}
+			int new_dist = get_total_pred_dis();
+			if (new_dist >= prev_dist)
+			{
+				// no better, recover
+				_clear_pred(i);
+				_restore_pred(i, saved_pred);
+				//_back_trace_by_pred(_target_idx, i, true);
+				break;
+				continue;
+			}
+			ignore_set.insert(nearest_idx);
+
+			auto source_map_ite = source_map.find(nearest_idx);
+			if (source_map_ite != source_map.end())
+			{
+				size_t nearest_i = source_map_ite->second;
+				auto ite = single_end_sources.find(nearest_i);
+				if (ite != single_end_sources.end())
+				{
+					single_end_sources.erase(ite);
+				}
+			}
+			else
+			{
+				printf("%s, %d error, cannot find %d,%d in source map\n", __func__, __LINE__, nearest_idx.x, nearest_idx.y);
+				continue;
+			}
+			break;
 		}
 	}
 }
